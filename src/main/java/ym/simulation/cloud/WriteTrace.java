@@ -37,7 +37,7 @@ public class WriteTrace {
 		int videoNum = 1000;
 		int presetNum = 3;
 		String presets[] = {"medium","fast","ultrafast"};
-		double avgCodingTime = 10;
+		double avgCodingTime = 10; // five minutes
 		// add video segment
 		for (int i = 0; i < videoNum; i++) {
 			double codingTime = MyRandom.exponential(avgCodingTime)+1;
@@ -52,7 +52,7 @@ public class WriteTrace {
 						.addAttribute("preset", presets[j])
 						.addAttribute("OutputSize",
 								String.valueOf( (int)(codingTime * 20*(j+1))) )
-						.addAttribute("time", String.valueOf(codingTime*(j+1)))
+						.addAttribute("time", String.valueOf(codingTime/(j+1)))
 						.addAttribute("psnr", String.valueOf(50));
 			}
 
