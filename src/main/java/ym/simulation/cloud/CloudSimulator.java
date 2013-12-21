@@ -78,9 +78,9 @@ public class CloudSimulator extends Simulator {
 	}
 
 	void start() {
-		double lastTS = 100.0;
-		double avg_interval = 3.0; // for arrival time
-		double avg_joblen = 1.0; // for service time
+		double lastTS = 1000.0;
+		double avg_interval = 5.0; // for arrival time
+//		double avg_joblen = 1.0; // for service time
 		events = new ListQueue();
 
 		/* Create the generator, queue, and simulator */
@@ -91,7 +91,7 @@ public class CloudSimulator extends Simulator {
 		record.queue = queue;
 		queue.record = record;
 
-		for (int i = 0; i < 4; i++) {
+		for (int i = 0; i < 10; i++) {
 			Server server = new Server(i);
 			server.record = record;
 			queue.mountServer(server);
