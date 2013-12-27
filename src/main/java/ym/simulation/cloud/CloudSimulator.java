@@ -78,6 +78,10 @@ public class CloudSimulator extends Simulator {
 	}
 
 	void start() {
+		routine_test_V();
+	}
+	
+	void routine_test_V (){
 		double lastTS = 1000.0;
 		double avg_interval = 5.0; // for arrival time
 //		double avg_joblen = 1.0; // for service time
@@ -104,16 +108,6 @@ public class CloudSimulator extends Simulator {
 		generator.time = 0.0;
 		generator.parseTrace("video.xml");
 		insert(generator);
-
-//		Generator generator2 = new Generator(lastTS, avg_interval*2, avg_joblen*2);
-//		generator2.queue = queue;
-//		generator2.time = lastTS/2;
-//		insert(generator2);
-//		
-//		Generator generator3 = new Generator(lastTS, avg_interval, avg_joblen);
-//		generator3.queue = queue;
-//		generator3.time = lastTS/2;
-//		insert(generator3);
 
 		record.time = 0.0; // recorder event
 		insert(record);

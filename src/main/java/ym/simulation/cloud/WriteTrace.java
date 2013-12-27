@@ -41,19 +41,27 @@ public class WriteTrace {
 		// add video segment
 		for (int i = 0; i < videoNum; i++) {
 			double codingTime = MyRandom.exponential(avgCodingTime)+1;
-
+			int origSize = (int) (codingTime * 100);
 			Element videoSegment = root.addElement("VideoSegment");
-
+			// raw video file size
 			videoSegment.addAttribute("videoName", "fakeVideo_" + i)
-					.addAttribute("OrigSize", String.valueOf((int) (codingTime * 100)));
+					.addAttribute("OrigSize", String.valueOf(origSize));
+			
 			for (int j = 0; j < presetNum; j++) {
+				// output file size under preset
+				int outputSize = (int)(codingTime * 20*(j+1));
+				// coding time under preset
+				double codingTime_preset = codingTime/(j+1);
+				// psnr under preset
+				double psnr = codingTime/(j+1);
+				
 				videoSegment
 						.addElement("codingResult")
 						.addAttribute("preset", presets[j])
 						.addAttribute("OutputSize",
-								String.valueOf( (int)(codingTime * 20*(j+1))) )
-						.addAttribute("time", String.valueOf(codingTime/(j+1)))
-						.addAttribute("psnr", String.valueOf(50));
+								String.valueOf( outputSize) )
+						.addAttribute("time", String.valueOf(codingTime_preset))
+						.addAttribute("psnr", String.valueOf(psnr));
 			}
 
 		}
