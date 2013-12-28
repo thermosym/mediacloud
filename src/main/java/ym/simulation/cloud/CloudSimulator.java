@@ -72,16 +72,27 @@ class Server extends Event {
 }
 
 public class CloudSimulator extends Simulator {
-
+	
 	public static void main(String[] args) {
 		new CloudSimulator().start();
 	}
 
 	void start() {
-		routine_test_V();
+		routine_show_avg_V();
 	}
 	
-	void routine_test_V (){
+	void routine_show_avg_V(){
+		int max_v = 100; // max_v value;
+		
+		for (int i=0; i<max_v; i++){
+			routine_test_v (i);
+		}
+	}
+	/*
+	 * test the simulation for value v
+	 */
+	void routine_test_v (int v){
+		//TODO: try to return a value of output data(collection or string)
 		double lastTS = 1000.0;
 		double avg_interval = 5.0; // for arrival time
 //		double avg_joblen = 1.0; // for service time
