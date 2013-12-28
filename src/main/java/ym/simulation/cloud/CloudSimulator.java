@@ -99,7 +99,6 @@ public class CloudSimulator extends Simulator {
 		events = new ListQueue();
 
 		/* Create the generator, queue, and simulator */
-		
 		Queue queue = new Queue();
 		
 		Recorder record = new Recorder(lastTS);
