@@ -82,18 +82,24 @@ public class CloudSimulator extends Simulator {
 	}
 	
 	void routine_show_avg_V(){
-		int max_v = 100; // max_v value;
+		int max_v = 50; // max_v value;
+		double lastTS = 1000.0;
 		
 		for (int i=0; i<max_v; i++){
-			routine_test_v (i);
+			Recorder rc = routine_test_v (i, lastTS);
+//			System.out.println("AVG-QLen="+rc.getAvgQlen()
+//					+ "  LOG-Avg-Delay=" + rc.getLogAvgDelay() );
+//			rc.outputRcord("queueData.m",lastTS);
+			double avg_qlen = rc.getAvgQlen();
+			double avg_delay = rc.getLogAvgDelay();
 		}
 	}
 	/*
 	 * test the simulation for value v
 	 */
-	void routine_test_v (int v){
+	Recorder routine_test_v (int v, double lastTS){
 		//TODO: try to return a value of output data(collection or string)
-		double lastTS = 1000.0;
+		
 		double avg_interval = 5.0; // for arrival time
 //		double avg_joblen = 1.0; // for service time
 		events = new ListQueue();
@@ -124,8 +130,6 @@ public class CloudSimulator extends Simulator {
 		
 		doAllEvents();
 		
-		System.out.println("AVG-QLen="+record.getAvgQlen()
-						+ "  LOG-Avg-Delay=" + record.getLogAvgDelay() );
-		record.outputRcord("queueData.m",lastTS);
+		return record;
 	}
 }
