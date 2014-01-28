@@ -1,5 +1,8 @@
 package ym.simulation.cloud;
 
+import java.util.ArrayList;
+import java.util.Vector;
+
 /**
 * A server that holds a Task for an exponentially distributed amout of time
 * and releases it.
@@ -86,7 +89,8 @@ public class CloudSimulator extends Simulator {
 		double lastTS = 1000.0;
 		
 		for (int i=0; i<max_v; i++){
-			Recorder rc = routine_test_v (i, lastTS);
+//			Recorder rc = routine_test_v (i, lastTS);
+			Recorder rc = routine_multiQ_v (i, lastTS);
 //			System.out.println("AVG-QLen="+rc.getAvgQlen()
 //					+ "  LOG-Avg-Delay=" + rc.getLogAvgDelay() );
 //			rc.outputRcord("queueData.m",lastTS);
@@ -94,6 +98,48 @@ public class CloudSimulator extends Simulator {
 			double avg_delay = rc.getLogAvgDelay();
 		}
 	}
+	
+	Recorder routine_multiQ_v (int v, double lastTS){
+		int serverNum = 1;
+		double avg_interval = 5.0; // for arrival time 5s
+		events = new ListQueue(); // event queue
+		
+		Recorder record = new Recorder(lastTS); //TODO: new recorder class 
+		
+		String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_"};
+		Vector<Server> serverVector = new Vector<Server>(); // server array
+		
+		for (int i = 0; i < serverNum; i++) {
+			Server server = new Server(i);
+			serverVector.add(server);
+			server.record = record;
+		}
+		
+		
+		for (String videoName : videoBaseNameStrings) {
+			Queue queue = new Queue(); // video segment queue for the video stream
+			// register record and queue
+			record.addQueueListen(queue);
+			queue.record = record;
+			queue.mountServer(serverVector); //TODO: need register queue in the server obj?
+			
+			Generator generator = new Generator(lastTS, avg_interval);
+			generator.queue = queue;
+			generator.time = 0.0;
+			generator.parseTraceTXT(videoName);
+			insert(generator);
+		}
+		
+		
+
+		record.time = 0.0; // recorder event
+		insert(record);
+		
+		doAllEvents();
+
+		return record;
+	}
+	
 	/*
 	 * test the simulation for value v
 	 */
@@ -108,27 +154,13 @@ public class CloudSimulator extends Simulator {
 		Queue queue = new Queue();
 		
 		Recorder record = new Recorder(lastTS);
-		record.queue = queue;
+		
 		queue.record = record;
 
-		for (int i = 0; i < 10; i++) {
-			Server server = new Server(i);
-			server.record = record;
-			queue.mountServer(server);
-		}
-		queue.initSvrLimit(1);
+
+		queue.initSvrLimit(1); // set initial VMs number
 
 		/* Start the generator by creating one Task immediately */
-		Generator generator = new Generator(lastTS, avg_interval);
-		generator.queue = queue;
-		generator.time = 0.0;
-		generator.parseTrace("video.xml");
-		insert(generator);
-
-		record.time = 0.0; // recorder event
-		insert(record);
-		
-		doAllEvents();
 		
 		return record;
 	}

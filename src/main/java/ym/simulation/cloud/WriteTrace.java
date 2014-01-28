@@ -1,6 +1,11 @@
 package ym.simulation.cloud;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
+import java.io.InputStreamReader;
 import java.util.Random;
 
 import org.dom4j.Document;
@@ -19,7 +24,8 @@ public class WriteTrace {
 					format);
 
 //			Document doc = createDoc();
-			Document doc = getFakeTrace();
+//			Document doc = getFakeTrace();
+			Document doc = getRealTrace();
 			writer.write(doc);
 			writer.close();
 
@@ -29,6 +35,43 @@ public class WriteTrace {
 		}
 	}
 
+	public static Document getRealTrace() throws Exception{
+		Document doc = DocumentHelper.createDocument();
+		//root of the data
+		Element root = doc.addElement("EncodingTrace");
+		String trace_baseName = "bbb_trans_trace_";
+		
+		String presets[]={"ultrafast", "superfast", "veryfast", "faster", "fast", 
+				"medium", "slow", "slower", "veryslow" };
+		// record all preset log
+		for (String pset : presets) {
+			// reading data from txt file
+			File file = new File("./trace/"+trace_baseName+pset+".txt");
+			BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+			String[] enT_String = br.readLine().split("\\s+");
+			String[] bitR_String = br.readLine().split("\\s+");
+			//for each video segment
+			for (int i = 0; i < enT_String.length; i++) {
+				double codingTime = 0;
+				int origSize = 0;
+				Element videoSegment = root.addElement("VideoSegment");
+				// raw video file size
+				videoSegment.addAttribute("videoName", trace_baseName+"_" + i)
+						.addAttribute("OrigSize", String.valueOf(origSize));
+				;
+				// coding data
+				videoSegment
+				.addElement("codingResult")
+				.addAttribute("preset", pset)
+				.addAttribute("OutputBitRate",
+						String.valueOf( bitR_String[i]) )
+				.addAttribute("time", enT_String[i]);
+			}
+		}
+		
+		return null;
+	}
+	
 	public static Document getFakeTrace() {
 		Document doc = DocumentHelper.createDocument();
 		//root of the data

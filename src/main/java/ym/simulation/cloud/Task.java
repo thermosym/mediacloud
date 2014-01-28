@@ -5,13 +5,13 @@ import java.util.ArrayList;
 class CodingSet{
 	String preset;
 	double codingTime;
-	int outputSize;
+	double outputBitR;
 	double psnr;
 }
 
 public class Task {
 	String videoName;
-	double origSize;	
+	double origBitR;	
 	long userID;
 	long taskID;
 	ArrayList<CodingSet> codingSets;
@@ -46,7 +46,7 @@ public class Task {
 	
 	public Task(Task task){
 		this.videoName = task.videoName;
-		this.origSize = task.origSize;
+		this.origBitR = task.origBitR;
 		this.userID = task.userID;
 		this.taskID = task.taskID;
 		this.codingSets = task.codingSets;
@@ -68,7 +68,7 @@ public class Task {
 		this.rec_inTS = inTS;
 		this.rec_serveTS = serveTS;
 		this.rec_outTS = outTS;
-		this.origSize = bit;
+		this.origBitR = bit;
 		this.userID = userID;
 		this.taskID = taskID;
 		this.codingSets = codingSets;
@@ -82,5 +82,16 @@ public class Task {
 			}
 		}
 		return cset;
+	}
+
+	public String getContent() {
+		StringBuffer content = new StringBuffer();
+		content.append(videoName).append(":");
+		for (CodingSet cset : codingSets) {
+			content.append(cset.preset).append("=[").append(cset.codingTime)
+					.append(",").append(cset.outputBitR).append("], ");
+		}
+		
+		return null;
 	}
 }

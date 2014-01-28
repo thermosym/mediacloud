@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -50,15 +51,16 @@ public class Generator extends Event {
     * schedule the creation of the next Task
     */
     void execute(AbstractSimulator simulator) {
-//    	double task_duration = avg_joblen; //Random.exponential(avg_joblen);
-//    	double task_duration = MyRandom.exponential(avg_joblen);
-    	
+   	
     	Task task = new Task(getOneVideo());
     	task.rec_inTS = ((Simulator)simulator).now();
-    	task.rec_preset = "medium"; //TODO: set default preset 
-        queue.insert(simulator, task);
+    	//task.rec_preset = "ultrafast"; //TODO: set default preset 
+        queue.insert(simulator, task); // insert the task to queue and schedule it
         
-        time += MyRandom.exponential(avg_interval);
+        String contentString = task.getContent(); //TODO: for test
+        System.out.println(contentString);
+        
+        time += avg_interval; //MyRandom.exponential(avg_interval)
         //time += avg_interval;
         if (time < lastTS) simulator.insert(this);
     }
@@ -71,8 +73,8 @@ public class Generator extends Event {
 		
 		// loop select the video from the trace
 		if (lastArriveIndex >= traceList.size()-1 ) {
-			lastArriveIndex = 0; // reach the end of list, go back again
-			videoTask = traceList.get(lastArriveIndex);
+//			lastArriveIndex = 0; // reach the end of list, go back again
+//			videoTask = traceList.get(lastArriveIndex);
 		} else {
 			lastArriveIndex++; // next video
 			videoTask = traceList.get(lastArriveIndex);
@@ -81,39 +83,73 @@ public class Generator extends Event {
 		return videoTask;
 	}
     
-	public void parseTrace(String fileName){
-    	try {
-			SAXReader reader = new SAXReader();
-			Document document = reader.read(new File(fileName));
-			
-			System.out.println("start parse XML Document");
-
-			Element root = document.getRootElement();
-			
-			List<Element> segmentlist = root.elements("VideoSegment");
-			for (Element elmSeg : segmentlist) {
-				Task tsk = new Task();
-				tsk.videoName = elmSeg.attributeValue("videoName");
-				tsk.origSize = Integer.parseInt(elmSeg.attributeValue("OrigSize"));
-				tsk.codingSets = new ArrayList<CodingSet>();
-				
-				List<Element> result = elmSeg.elements("codingResult");
-				for (Element elmRt : result) {
-					// add into the trace list
-					CodingSet cSet = new CodingSet();
-					cSet.preset = elmRt.attributeValue("preset");
-					cSet.outputSize = Integer.parseInt(elmRt.attributeValue("OutputSize"));
-					cSet.codingTime = Double.parseDouble(elmRt.attributeValue("time"));
-					cSet.psnr = Double.parseDouble(elmRt.attributeValue("psnr"));
-					tsk.codingSets.add(cSet);
-				}
-				traceList.add(tsk);
+	public void parseTraceTXT(String videoName) {
+		String presets[]={"ultrafast", "superfast", "veryfast", "faster", "fast", 
+				"medium", "slow", "slower", "veryslow" };
+		for (String pset : presets) {
+			// reading data from txt file
+			File file = new File("./trace/"+videoName+pset+".txt");
+			BufferedReader br;
+			String[] enT_String = null;
+			String[] bitR_String = null;
+			try {
+				br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+				enT_String = br.readLine().split("\\s+");
+				bitR_String = br.readLine().split("\\s+");
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-			System.out.println("end parse XML Document");
-		} catch (Exception e) {
-			e.printStackTrace();
+			
+			//for each video segment
+			for (int i = 0; i < enT_String.length; i++) {
+
+				String vName = videoName+i;
+				double origBitR = 0;
+				double enT = Double.parseDouble(enT_String[i]);
+				double bitR = Double.parseDouble(bitR_String[i]); 
+				updateTaskTrace(pset,vName,origBitR,enT,bitR);
+			}
+
 		}
-    }
+		
+	}
+
+	private void updateTaskTrace(String pset, String vName, double origBitR,
+			double enT, double enbitR) {
+		Task tskTask=null;
+		
+		for (int i = 0; i < traceList.size(); i++) {
+			if (traceList.get(i).videoName.equals(vName)){
+				//find this video
+				tskTask = traceList.get(i); 
+				break;
+			}
+		}
+		
+		if (tskTask != null){
+			//update it
+			CodingSet cSet = new CodingSet();
+			cSet.preset = pset;
+			cSet.outputBitR = enbitR;
+			cSet.codingTime = enT;
+			tskTask.codingSets.add(cSet);
+		}else{
+			//create this video
+			tskTask = new Task();
+			tskTask.videoName = vName;
+			tskTask.origBitR = origBitR;
+			tskTask.codingSets = new ArrayList<CodingSet>();
+			
+			CodingSet cSet = new CodingSet();
+			cSet.preset = pset;
+			cSet.outputBitR = enbitR;
+			cSet.codingTime = enT;
+			tskTask.codingSets.add(cSet);
+			
+			traceList.add(tskTask);
+		}
+	}
 }
 
 class MyRandom {

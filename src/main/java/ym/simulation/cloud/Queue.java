@@ -1,5 +1,8 @@
 package ym.simulation.cloud;
 
+import java.util.ArrayList;
+import java.util.Vector;
+
 abstract class OrderedSet {
 	abstract void insert(Comparable x);
 
@@ -79,7 +82,7 @@ public class Queue {
     	// insert into queue
     	m_Tasks.addElement(task);
     	// update the log
-    	record.updateArrivalEvent(task);
+//    	record.updateArrivalEvent(task);
     	
         schedule(simulator); // schedule the task
     }
@@ -91,7 +94,7 @@ public class Queue {
     public void schedule(AbstractSimulator simulator){
     	if ( !onlySlotSchedule ) {
 //			energySchedule(simulator);
-			baseSchedule(simulator);
+//			baseSchedule(simulator);
 //			maxQSchedule(simulator);
     	}
     }
@@ -144,9 +147,8 @@ public class Queue {
         return m_Tasks.size();
     }
     
-    public void mountServer(Server server){
-    	this.m_Vserver.add(server);
-    	server.queue = this;
+    public void mountServer(Vector<Server> serverVector){
+    	this.m_Vserver = serverVector;
     }
     
     public void initSvrLimit(int startNumber){
@@ -155,25 +157,25 @@ public class Queue {
     	m_svrLimit = (startNumber>maxSvrNum)?maxSvrNum:startNumber;
     }
     
-    public void updateSvrLimit(){
-//    	int maxQsize = 6;
-//    	int minQsize = 4;
-//    	//update the server number limitation
-//    	if (m_Tasks.size() < minQsize){
+//    public void updateSvrLimit(){
+////    	int maxQsize = 6;
+////    	int minQsize = 4;
+////    	//update the server number limitation
+////    	if (m_Tasks.size() < minQsize){
+////    		setM_svrLimit(getM_svrLimit()-1); // try to down scale
+////    	}else if(m_Tasks.size() > maxQsize){
+////    		setM_svrLimit(getM_svrLimit()+1); // try to up scale
+////		}
+//    	
+//    	double maxWsize = 3;
+//    	double minWsize = 1;
+//    	double taskSize = getWorkSize();
+//    	if (taskSize < minWsize){
 //    		setM_svrLimit(getM_svrLimit()-1); // try to down scale
-//    	}else if(m_Tasks.size() > maxQsize){
+//    	}else if(taskSize > maxWsize){
 //    		setM_svrLimit(getM_svrLimit()+1); // try to up scale
 //		}
-    	
-    	double maxWsize = 3;
-    	double minWsize = 1;
-    	double taskSize = getWorkSize();
-    	if (taskSize < minWsize){
-    		setM_svrLimit(getM_svrLimit()-1); // try to down scale
-    	}else if(taskSize > maxWsize){
-    		setM_svrLimit(getM_svrLimit()+1); // try to up scale
-		}
-    }
+//    }
     /**
      * @return server which is idle. If no idle server, then return null.
      */

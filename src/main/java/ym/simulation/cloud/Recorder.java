@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.lang.invoke.ConstantCallSite;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Vector;
 
 class SlotLog {
 	long idx_task_low;
@@ -43,7 +44,7 @@ public class Recorder extends Event{
 
 	double lastTS;
 	double interval_qlencheck=1.0;
-	Queue queue;
+	Vector<Queue> queueVector = new Vector<Queue>();
 		
 	ArrayList<Task> tasklog = new ArrayList<Task>();
 	ArrayList<SlotLog> slotLog = new ArrayList<SlotLog>();
@@ -52,17 +53,17 @@ public class Recorder extends Event{
 	@Override
 	void execute(AbstractSimulator simulator) {
 		 
-		// new slot event log
-		lastSlotLogObj =
-			new SlotLog(
-				((Simulator)simulator).now(), 
-				interval_qlencheck, 
-				queue.size()+queue.getServNum())  ;
-		// update server limit
-		queue.updateSvrLimit();
-		lastSlotLogObj.parallel = queue.getM_svrLimit();
-		lastSlotLogObj.parallel_real = queue.getWorkingParallel();
-		slotLog.add( lastSlotLogObj );
+//		// new slot event log
+//		lastSlotLogObj =
+//			new SlotLog(
+//				((Simulator)simulator).now(), 
+//				interval_qlencheck, 
+//				queue.size()+queue.getServNum())  ;
+//		// update server limit
+////		queue.updateSvrLimit();
+//		lastSlotLogObj.parallel = queue.getM_svrLimit();
+//		lastSlotLogObj.parallel_real = queue.getWorkingParallel();
+//		slotLog.add( lastSlotLogObj );
 		
 		// schedule next record
         time += interval_qlencheck;
@@ -341,5 +342,10 @@ public class Recorder extends Event{
 	public void updateEmitEvent(long m_serverID, Task task) {
 		// TODO Auto-generated method stub
 		lastSlotLogObj.emittedNumber++;
+	}
+
+	public void addQueueListen(Queue queue) {
+		// TODO Auto-generated method stub
+		queueVector.add(queue);
 	}
 }
