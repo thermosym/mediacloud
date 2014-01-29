@@ -7,15 +7,17 @@ import java.util.Vector;
 * and releases it.
 */
 class Server extends Event {
-	public Server(long serverID, CloudSimulator sim) {
+	public Server(long serverID, CloudSimulator sim, double speed) {
 		super();
 		this.m_serverID = serverID;
 		this.m_simulator = sim;
+		this.m_speedScale = speed;
 	}
 
 	long m_serverID;
     private Task TaskBeingServed;
     private CloudSimulator m_simulator;
+    public double m_speedScale;
 
     
     /**
@@ -66,13 +68,13 @@ class Server extends Event {
 			System.err.println("preset "+task.rec_preset+" cannot find in the trace");
 		}
         
-        time = m_simulator.now() + codingTime;
+        time = m_simulator.now() + codingTime/m_speedScale;
         simulator.insert(this);
     }
 }
 
 public class CloudSimulator extends Simulator {
-	boolean onlySlotSchedule=false;
+	boolean onlySlotSchedule=true;
 	Vector<Queue> m_queuVector;
 	Vector<Server> m_serverVector;
 	Recorder m_recorder;
@@ -88,7 +90,7 @@ public class CloudSimulator extends Simulator {
 	
 	void routine_show_avg_V(){
 		int max_v = 1; // max_v value;
-		double lastTS = 1000.0;
+		double lastTS = 500.0;
 		
 		for (int i=0; i<max_v; i++){
 			routine_multiQ_v (i, lastTS);
@@ -107,7 +109,7 @@ public class CloudSimulator extends Simulator {
 	}
 	
 	void routine_multiQ_v (int v, double lastTS){
-		int serverNum = 1;
+		int serverNum = 2;
 		double avg_interval = 5.0; // for arrival time 5s
 		events = new ListQueue(); // event queue
 		m_serverVector = new Vector<Server>(); // server array
@@ -118,7 +120,7 @@ public class CloudSimulator extends Simulator {
 		
 		
 		for (int i = 0; i < serverNum; i++) {
-			Server server = new Server(i, this);
+			Server server = new Server(i, this, 0.6);
 			m_serverVector.add(server);
 		}
 		

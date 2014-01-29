@@ -38,7 +38,7 @@ public class Recorder extends Event{
 	CloudSimulator m_simulator;
 	
 	double lastTS;
-	double interval_qlencheck=1.0;
+	double interval_qlencheck=0.1;
 
 	ArrayList<Task> tasklog = new ArrayList<Task>();
 	ArrayList<SlotLog> slotLogList = new ArrayList<SlotLog>();
