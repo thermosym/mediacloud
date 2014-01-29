@@ -140,28 +140,4 @@ public class CloudSimulator extends Simulator {
 		return record;
 	}
 	
-	/*
-	 * test the simulation for value v
-	 */
-	Recorder routine_test_v (int v, double lastTS){
-		//TODO: try to return a value of output data(collection or string)
-		
-		double avg_interval = 5.0; // for arrival time
-//		double avg_joblen = 1.0; // for service time
-		events = new ListQueue();
-
-		/* Create the generator, queue, and simulator */
-		Queue queue = new Queue();
-		
-		Recorder record = new Recorder(lastTS);
-		
-		queue.record = record;
-
-
-		queue.initSvrLimit(1); // set initial VMs number
-
-		/* Start the generator by creating one Task immediately */
-		
-		return record;
-	}
 }

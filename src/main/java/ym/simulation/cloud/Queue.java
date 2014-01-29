@@ -70,8 +70,6 @@ public class Queue {
     private java.util.Vector<Task> m_Tasks = new java.util.Vector<Task>();
     private java.util.Vector<Server> m_Vserver = new java.util.Vector<Server>();
 
-	private int minSvrNum;
-	private int maxSvrNum;
     /**
     * Add a Task to the queue.
     * If the server is available, 
@@ -116,7 +114,7 @@ public class Queue {
      */
     public void maxQSchedule(AbstractSimulator simulator){
     	
-    	Server idleServer = getIdleServerLimit(); // under server number limit
+    	Server idleServer = getIdleServer(); // under server number limit
 		if (!m_Tasks.isEmpty() && (idleServer != null)) {
 			Task task = remove(); // get first element
 			idleServer.serveTask(simulator, task);
@@ -151,31 +149,7 @@ public class Queue {
     	this.m_Vserver = serverVector;
     }
     
-    public void initSvrLimit(int startNumber){
-    	minSvrNum = 1;
-    	maxSvrNum = m_Vserver.size();
-    	m_svrLimit = (startNumber>maxSvrNum)?maxSvrNum:startNumber;
-    }
-    
-//    public void updateSvrLimit(){
-////    	int maxQsize = 6;
-////    	int minQsize = 4;
-////    	//update the server number limitation
-////    	if (m_Tasks.size() < minQsize){
-////    		setM_svrLimit(getM_svrLimit()-1); // try to down scale
-////    	}else if(m_Tasks.size() > maxQsize){
-////    		setM_svrLimit(getM_svrLimit()+1); // try to up scale
-////		}
-//    	
-//    	double maxWsize = 3;
-//    	double minWsize = 1;
-//    	double taskSize = getWorkSize();
-//    	if (taskSize < minWsize){
-//    		setM_svrLimit(getM_svrLimit()-1); // try to down scale
-//    	}else if(taskSize > maxWsize){
-//    		setM_svrLimit(getM_svrLimit()+1); // try to up scale
-//		}
-//    }
+
     /**
      * @return server which is idle. If no idle server, then return null.
      */
@@ -190,16 +164,6 @@ public class Queue {
     	return idleS;
     }
     
-    public Server getIdleServerLimit(){
-    	Server idleS = null;
-    	for(int i=0; i< getM_svrLimit(); i++){
-    		if (m_Vserver.get(i).isAvailable()){
-    			idleS = m_Vserver.get(i);
-    			break;
-    		}
-    	}
-    	return idleS;
-    }
     
     public int getServNum(){
     	int servingNum=0;
@@ -210,17 +174,6 @@ public class Queue {
     	}
     	return servingNum;
     }
-
-	public int getM_svrLimit() {
-		return m_svrLimit;
-	}
-
-	public void setM_svrLimit(int svrLimit) {
-		if ( (svrLimit >= minSvrNum) && (svrLimit <= maxSvrNum ) ){
-			this.m_svrLimit = svrLimit;
-		}
-		
-	}
 	
 	public int getWorkingParallel() {
 		int para =0;
