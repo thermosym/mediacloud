@@ -1,6 +1,5 @@
 package ym.simulation.cloud;
 
-import java.util.ArrayList;
 import java.util.Vector;
 
 /**
@@ -8,33 +7,31 @@ import java.util.Vector;
 * and releases it.
 */
 class Server extends Event {
-	public Server(long serverID) {
+	public Server(long serverID, CloudSimulator sim) {
 		super();
 		this.m_serverID = serverID;
+		this.m_simulator = sim;
 	}
 
 	long m_serverID;
-	
     private Task TaskBeingServed;
-    Queue queue;
-    Recorder record;
+    private CloudSimulator m_simulator;
+
     
     /**
     * The Task's service is completed so print a message.
     * If the queue is not empty, get the next Task.
     */
     void execute(AbstractSimulator simulator) {
-//        System.out.println("Server-"+ m_serverID +" served task-" 
-//        		+ TaskBeingServed.taskID + " at time=" + time 
-//        		+ " wating_time = "+ (time - TaskBeingServed.inTS) 
-//        		);
+
     	TaskBeingServed.rec_outTS = ((Simulator)simulator).now();
     	// update the log
-    	record.updateOutEvent(TaskBeingServed);
+    	m_simulator.m_recorder.updateOutEvent(TaskBeingServed);
     	
         TaskBeingServed = null; // clear the server
-        if (queue.size()>0) {
-        	queue.schedule(simulator);
+        //try to schedule
+        if (m_simulator.onlySlotSchedule) {
+        	m_simulator.schedule(simulator);
         }
     }
     
@@ -54,11 +51,10 @@ class Server extends Event {
         TaskBeingServed = task;
         TaskBeingServed.rec_svrID = this.m_serverID;
         TaskBeingServed.rec_serveTS = ((Simulator)simulator).now();
-        TaskBeingServed.rec_currentQlen = queue.size(); //TODO: current queue length info
-        TaskBeingServed.rec_currentWorkSize = queue.getWorkSize();
-        TaskBeingServed.rec_currentSvrNum = queue.getWorkingParallel();
+        TaskBeingServed.rec_currentQlen = m_simulator.m_queuVector.get(task.queueIndex).size(); 
+
         //update the log
-        record.updateEmitEvent(this.m_serverID, task);
+        m_simulator.m_recorder.updateEmitEvent(this.m_serverID, task);
         
         CodingSet cset = task.getCodingResult(task.rec_preset);
         double codingTime=0;
@@ -68,17 +64,21 @@ class Server extends Event {
 			System.err.println("preset "+task.rec_preset+" cannot find in the trace");
 		}
         
-        
-        time = ((Simulator)simulator).now() + codingTime;
+        time = m_simulator.now() + codingTime;
         simulator.insert(this);
     }
 }
 
 public class CloudSimulator extends Simulator {
+	boolean onlySlotSchedule=false;
+	Vector<Queue> m_queuVector;
+	Vector<Server> m_serverVector;
+	Recorder m_recorder;
 	
 	public static void main(String[] args) {
 		new CloudSimulator().start();
 	}
+
 
 	void start() {
 		routine_show_avg_V();
@@ -89,55 +89,122 @@ public class CloudSimulator extends Simulator {
 		double lastTS = 1000.0;
 		
 		for (int i=0; i<max_v; i++){
-//			Recorder rc = routine_test_v (i, lastTS);
-			Recorder rc = routine_multiQ_v (i, lastTS);
+			routine_multiQ_v (i, lastTS);
 //			System.out.println("AVG-QLen="+rc.getAvgQlen()
 //					+ "  LOG-Avg-Delay=" + rc.getLogAvgDelay() );
 //			rc.outputRcord("queueData.m",lastTS);
-			double avg_qlen = rc.getAvgQlen();
-			double avg_delay = rc.getLogAvgDelay();
+			double avg_qlen[] = new double[m_queuVector.size()];
+			double avg_delay[] = new double[m_queuVector.size()];
+
+			for (int j = 0; j < m_queuVector.size(); j++) {
+				avg_qlen[j] = m_recorder.getAvgQlen(j);
+				avg_delay[j] = m_recorder.getTskAvgDelay(j);
+			}
+			
+			
 		}
 	}
 	
-	Recorder routine_multiQ_v (int v, double lastTS){
+	void routine_multiQ_v (int v, double lastTS){
 		int serverNum = 1;
 		double avg_interval = 5.0; // for arrival time 5s
 		events = new ListQueue(); // event queue
-		
-		Recorder record = new Recorder(lastTS); //TODO: new recorder class 
+		m_serverVector = new Vector<Server>(); // server array
+		m_queuVector = new Vector<Queue>();
+		m_recorder = new Recorder(lastTS,this);  
 		
 		String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_"};
-		Vector<Server> serverVector = new Vector<Server>(); // server array
+		
 		
 		for (int i = 0; i < serverNum; i++) {
-			Server server = new Server(i);
-			serverVector.add(server);
-			server.record = record;
+			Server server = new Server(i, this);
+			m_serverVector.add(server);
 		}
 		
 		
-		for (String videoName : videoBaseNameStrings) {
-			Queue queue = new Queue(); // video segment queue for the video stream
-			// register record and queue
-			record.addQueueListen(queue);
-			queue.record = record;
-			queue.mountServer(serverVector); //TODO: need register queue in the server obj?
+		for (int i=0; i<videoBaseNameStrings.length; i++) {
+			String videoName = videoBaseNameStrings[i];
+			Queue queue = new Queue(this); // video segment queue for the video stream
 			
-			Generator generator = new Generator(lastTS, avg_interval);
+			// register record and queue			
+			Generator generator = new Generator(i, lastTS, avg_interval);
 			generator.queue = queue;
 			generator.time = 0.0;
 			generator.parseTraceTXT(videoName);
 			insert(generator);
+			
+			m_queuVector.add(queue); // add it in queue vector
 		}
 		
 		
-
-		record.time = 0.0; // recorder event
-		insert(record);
+		m_recorder.init();
+		m_recorder.time = 0.0; // recorder event
+		insert(m_recorder);
 		
 		doAllEvents();
 
-		return record;
 	}
 	
+	public void schedule(AbstractSimulator simulator) {
+		// energySchedule(simulator);
+		baseSchedule(simulator);
+		// maxQSchedule(simulator);
+		
+	}
+
+    /*
+     * energy efficient schedule: lyapunov algorithm
+     */
+//    public void energySchedule(AbstractSimulator simulator){
+//		Server idleServer = getIdleServer();
+//		if (!m_Tasks.isEmpty() && (idleServer != null)) {
+//			Task task = remove(); // get first element
+//			idleServer.serveTask(simulator, task);
+//		}
+//    }
+    
+    /*
+     * keep the max queue size schedule algorithm
+     * 1. when Q > maxQ : increase one VM
+     * 2. when Q < maxQ : decrease one VM
+     */
+//    public void maxQSchedule(AbstractSimulator simulator){
+//    	
+//    	Server idleServer = getIdleServer(); // under server number limit
+//		if (!m_Tasks.isEmpty() && (idleServer != null)) {
+//			Task task = remove(); // get first element
+//			idleServer.serveTask(simulator, task);
+//		}
+//    }
+    
+    /*
+     * The base schedule: use all the VMs 
+     */
+    public void baseSchedule(AbstractSimulator simulator){
+		Server idleServer = getIdleServer();
+		// select a long queue length for dispatching
+		if (idleServer != null){
+			for (Queue que: m_queuVector) {
+				if(que.size() > 0){
+					Task tskTask = que.remove();
+					idleServer.serveTask(simulator, tskTask);
+					break;
+				}
+			}
+		}
+    }
+    
+    /**
+     * @return server which is idle. If no idle server, then return null.
+     */
+    public Server getIdleServer(){
+    	Server idleS = null;
+    	for(Server s:m_serverVector){
+    		if (s.isAvailable()){
+    			idleS = s;
+    			break;
+    		}
+    	}
+    	return idleS;
+    }
 }

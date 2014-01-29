@@ -21,25 +21,17 @@ import org.dom4j.io.SAXReader;
 */
 public class Generator extends Event {
     Queue queue;
+    int queueIndex;
     long m_taskIndex;
     double lastTS;
     double avg_interval;
-    @Deprecated
-    double avg_joblen;
     
     private ArrayList<Task> traceList;
     private int lastArriveIndex;
     
-    public Generator(double lastTS, double avg_interval, double avg_joblen){
-    	this.lastTS = lastTS;
-    	this.avg_interval = avg_interval;
-    	this.avg_joblen = avg_joblen;
-    	m_taskIndex = 0;
-    	traceList = new ArrayList<Task>();
-    	lastArriveIndex = 0;
-    }
-    
-    public Generator(double lastTS, double avg_interval){
+
+    public Generator(int queueIndex, double lastTS, double avg_interval){
+    	this.queueIndex = queueIndex;
     	this.lastTS = lastTS;
     	this.avg_interval = avg_interval;
     	m_taskIndex = 0;
@@ -51,18 +43,20 @@ public class Generator extends Event {
     * schedule the creation of the next Task
     */
     void execute(AbstractSimulator simulator) {
-   	
-    	Task task = new Task(getOneVideo());
-    	task.rec_inTS = ((Simulator)simulator).now();
-    	//task.rec_preset = "ultrafast"; //TODO: set default preset 
-        queue.insert(simulator, task); // insert the task to queue and schedule it
-        
-        String contentString = task.getContent(); //TODO: for test
-        System.out.println(contentString);
-        
-        time += avg_interval; //MyRandom.exponential(avg_interval)
-        //time += avg_interval;
-        if (time < lastTS) simulator.insert(this);
+    	Task task = getOneVideo();
+    	if (task != null){
+        	task.rec_inTS = ((Simulator)simulator).now();
+        	task.queueIndex = this.queueIndex;
+        	task.rec_preset = "ultrafast"; //TODO: set default preset 
+            queue.insert(simulator, task); // insert the task to queue and schedule it
+            
+            String contentString = task.getContent(); //TODO: for test
+            System.out.println(contentString);
+            
+            time += avg_interval; //MyRandom.exponential(avg_interval)
+            //time += avg_interval;
+            if (time < lastTS) simulator.insert(this);    		
+    	}
     }
     
     private Task getOneVideo() {
@@ -76,8 +70,8 @@ public class Generator extends Event {
 //			lastArriveIndex = 0; // reach the end of list, go back again
 //			videoTask = traceList.get(lastArriveIndex);
 		} else {
+			videoTask = new Task(traceList.get(lastArriveIndex));
 			lastArriveIndex++; // next video
-			videoTask = traceList.get(lastArriveIndex);
 		}
 		
 		return videoTask;

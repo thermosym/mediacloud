@@ -3,6 +3,8 @@ package ym.simulation.cloud;
 import java.util.ArrayList;
 import java.util.Vector;
 
+import org.omg.CORBA.PRIVATE_MEMBER;
+
 abstract class OrderedSet {
 	abstract void insert(Comparable x);
 
@@ -60,15 +62,15 @@ class ListQueue extends OrderedSet {
  * @author yangming
  */
 public class Queue {
-	int m_svrLimit;
-
-	boolean onlySlotSchedule=false;
-	Recorder record;
+	
+	private CloudSimulator m_simulator;
+	public Queue(CloudSimulator sim) {
+		this.m_simulator = sim;
+	}
     /**
     * Use the Java Vector to implement a FIFO queue.
     */
     private java.util.Vector<Task> m_Tasks = new java.util.Vector<Task>();
-    private java.util.Vector<Server> m_Vserver = new java.util.Vector<Server>();
 
     /**
     * Add a Task to the queue.
@@ -82,54 +84,7 @@ public class Queue {
     	// update the log
 //    	record.updateArrivalEvent(task);
     	
-        schedule(simulator); // schedule the task
-    }
-    /**
-     * schedule the task, when new arrival or finish job
-     * @param simulator
-     * @param task
-     */
-    public void schedule(AbstractSimulator simulator){
-    	if ( !onlySlotSchedule ) {
-//			energySchedule(simulator);
-//			baseSchedule(simulator);
-//			maxQSchedule(simulator);
-    	}
-    }
-    /*
-     * energy efficient schedule: lyapunov algorithm
-     */
-    public void energySchedule(AbstractSimulator simulator){
-		Server idleServer = getIdleServer();
-		if (!m_Tasks.isEmpty() && (idleServer != null)) {
-			Task task = remove(); // get first element
-			idleServer.serveTask(simulator, task);
-		}
-    }
-    
-    /*
-     * keep the max queue size schedule algorithm
-     * 1. when Q > maxQ : increase one VM
-     * 2. when Q < maxQ : decrease one VM
-     */
-    public void maxQSchedule(AbstractSimulator simulator){
-    	
-    	Server idleServer = getIdleServer(); // under server number limit
-		if (!m_Tasks.isEmpty() && (idleServer != null)) {
-			Task task = remove(); // get first element
-			idleServer.serveTask(simulator, task);
-		}
-    }
-    
-    /*
-     * The base schedule: use all the VMs 
-     */
-    public void baseSchedule(AbstractSimulator simulator){
-		Server idleServer = getIdleServer();
-		if (!m_Tasks.isEmpty() && (idleServer != null)) {
-			Task task = remove(); // get first element
-			idleServer.serveTask(simulator, task);
-		}
+        m_simulator.schedule(simulator); // schedule the task
     }
     
     /**
@@ -145,52 +100,6 @@ public class Queue {
         return m_Tasks.size();
     }
     
-    public void mountServer(Vector<Server> serverVector){
-    	this.m_Vserver = serverVector;
-    }
-    
 
-    /**
-     * @return server which is idle. If no idle server, then return null.
-     */
-    public Server getIdleServer(){
-    	Server idleS = null;
-    	for(Server s:m_Vserver){
-    		if (s.isAvailable()){
-    			idleS = s;
-    			break;
-    		}
-    	}
-    	return idleS;
-    }
-    
-    
-    public int getServNum(){
-    	int servingNum=0;
-    	for (Server s:m_Vserver){
-    		if (!s.isAvailable()){
-    			servingNum += 1;
-    		}
-    	}
-    	return servingNum;
-    }
-	
-	public int getWorkingParallel() {
-		int para =0;
-		for(Server s:m_Vserver){
-			if (!s.isAvailable()){
-				para++;
-			}
-		}
-		return para;
-	}
-	public double getWorkSize() {
-		// get accumulate work size;
-		double workSize=0;
-		for (Task tsk:m_Tasks) {
-			workSize += tsk.getCodingResult(tsk.rec_preset).codingTime;
-		}
-		return workSize;
-	}
-    
+
 }

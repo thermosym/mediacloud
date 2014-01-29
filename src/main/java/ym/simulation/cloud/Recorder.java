@@ -10,83 +10,88 @@ import java.util.Iterator;
 import java.util.Vector;
 
 class SlotLog {
-	long idx_task_low;
-	long idx_task_high;
 	double time_low;
 	double time_interval;
-	long Qlen;
+	int[] QlenVector;
 	long arriveNumber;
 	long serverdNumber;
 	long emittedNumber;
 	int parallel;
-	int parallel_real;
 	
-	public SlotLog(double time_low, double time_interval, long Qlen){
+	public SlotLog(double time_low, double time_interval){
 		this.time_low = time_low;
 		this.time_interval = time_interval;
-		this.Qlen = Qlen;
 		
-		this.idx_task_low = -1;
-		this.idx_task_high = -1;
 		this.arriveNumber = 0;
 		this.serverdNumber = 0;
 		this.emittedNumber = 0;
 		this.parallel = 0;
-		this.parallel_real = 0;
 	}
 }
 
 public class Recorder extends Event{
-	public Recorder(double lastTS) {
+	public Recorder(double lastTS, CloudSimulator sim) {
 		super();
 		this.lastTS = lastTS;
+		this.m_simulator = sim;
 	}
-
+	CloudSimulator m_simulator;
+	
 	double lastTS;
 	double interval_qlencheck=1.0;
-	Vector<Queue> queueVector = new Vector<Queue>();
-		
+
 	ArrayList<Task> tasklog = new ArrayList<Task>();
 	ArrayList<SlotLog> slotLog = new ArrayList<SlotLog>();
 	
 	SlotLog lastSlotLogObj;
 	@Override
-	void execute(AbstractSimulator simulator) {
-		 
-//		// new slot event log
-//		lastSlotLogObj =
-//			new SlotLog(
-//				((Simulator)simulator).now(), 
-//				interval_qlencheck, 
-//				queue.size()+queue.getServNum())  ;
-//		// update server limit
-////		queue.updateSvrLimit();
-//		lastSlotLogObj.parallel = queue.getM_svrLimit();
-//		lastSlotLogObj.parallel_real = queue.getWorkingParallel();
-//		slotLog.add( lastSlotLogObj );
+	void execute(AbstractSimulator simulator) {		 
+		// new slot event log
+		lastSlotLogObj = new SlotLog(m_simulator.now(), 
+				interval_qlencheck)  ;
+		// parallel 
+		int parallel_num=0;
+		for (Server svr : m_simulator.m_serverVector) {
+			if (!svr.isAvailable()){
+				parallel_num++;
+			}
+		}
+		lastSlotLogObj.parallel = parallel_num;
+		
+		// update queue length
+		int[] QlenVector = new int[m_simulator.m_queuVector.size()];
+		for (int i = 0; i < QlenVector.length; i++) {
+			QlenVector[i] = m_simulator.m_queuVector.get(i).size();
+		}
+		lastSlotLogObj.QlenVector = QlenVector;
+
+		// insert it into the list
+		slotLog.add(lastSlotLogObj);
 		
 		// schedule next record
         time += interval_qlencheck;
         if (time < lastTS) simulator.insert(this);
 	}
 	
-	/*
-	 * get average arrival rate for the last interval time
-	 */
-	public double getAvgArrivalRate(double interval){
-		double rate=0;
-		
-		return rate;
-	}
-	
-	public double getAvgQlen(){
+	public double getAvgQlen(int queueIndex){
 		double avg = 0.0;
 		
 		for(int i=0; i<slotLog.size(); i++){
-			avg += slotLog.get(i).Qlen;
+			avg += slotLog.get(i).QlenVector[queueIndex];
 		}		
 		avg = (slotLog.size() >0) ? (avg/slotLog.size()) : 0;  
 		
+		return avg;
+	}
+	
+	public double getTskAvgDelay(int queueIndex){
+		double avg=0.0;
+		for (Task tskTask : tasklog) {
+			if (tskTask.queueIndex == queueIndex){
+				avg += tskTask.rec_outTS - tskTask.rec_inTS;	
+			}
+		}
+		avg = (tasklog.size()>0) ? (avg/tasklog.size()) : 0;
 		return avg;
 	}
 
@@ -94,47 +99,15 @@ public class Recorder extends Event{
 		tasklog.add(tsk);
 	}
 	
-	public double getLogAvgDelay(){
-		double avg=0.0;
-		
-		for (int i=0; i<tasklog.size(); i++){
-			double alldelay = tasklog.get(i).rec_outTS - tasklog.get(i).rec_inTS; 
-			avg += alldelay;
-		}
-		avg = (tasklog.size()>0) ? (avg/tasklog.size()) : 0;
-		return avg;
-	}
-	
 	public void outputRcord(String outFile, double lastTS) {
 		try {
 			PrintWriter pw = new PrintWriter(
 					new OutputStreamWriter(new FileOutputStream(outFile)), true);
-			
-			pw.print("index_delay=[");
-			for (int i=0; i<tasklog.size(); i++){
-				double index_delay = tasklog.get(i).rec_inTS; 
-				if (tasklog.get(i).rec_outTS <= lastTS){
-					pw.print(index_delay+",");
-				}else{
-					break;
-				}
-				
+						
+			// print delay trace
+			for (int i = 0; i < m_simulator.m_queuVector.size(); i++) {
+				pw.println(getTaskDelayTrace(i));
 			}
-			pw.print("];");
-			pw.println();
-			
-			pw.print("task_delay=[");
-			for (int i=0; i<tasklog.size(); i++){
-				double delay = tasklog.get(i).rec_outTS - tasklog.get(i).rec_inTS; 
-				if (tasklog.get(i).rec_outTS <= lastTS){
-					pw.print(delay+",");
-				}else{
-					break;
-				}
-				
-			}
-			pw.print("];");
-			pw.println();
 			
 			pw.print("index_qlen=[");
 			for (int i=0; i<tasklog.size(); i++){
@@ -174,16 +147,6 @@ public class Recorder extends Event{
 			pw.print("];");
 			pw.println();
 
-			pw.print("task_svrsize=[");
-			for (int i=0; i<tasklog.size(); i++){
-				if (tasklog.get(i).rec_outTS <= lastTS){
-					pw.print(tasklog.get(i).rec_currentSvrNum+",");
-				}else{
-					break;
-				}
-			}
-			pw.print("];");
-			pw.println();
 			
 			pw.print("index_Sqlen=[");
 			for (int i=0; i<slotLog.size(); i++){
@@ -197,17 +160,7 @@ public class Recorder extends Event{
 			pw.print("];");
 			pw.println();
 			
-			pw.print("task_Sqlen=[");
-			for (int i=0; i<slotLog.size(); i++){
-				long qlen = slotLog.get(i).Qlen;
-				if (slotLog.get(i).time_low <= lastTS){
-					pw.print(qlen+",");
-				}else{
-					break;
-				}
-			}
-			pw.print("];");
-			pw.println();
+
 			
 			pw.print("index_Sqlen=[");
 			for (int i=0; i<slotLog.size(); i++){
@@ -220,18 +173,7 @@ public class Recorder extends Event{
 			}
 			pw.print("];");
 			pw.println();
-			
-			pw.print("task_Sqlen=[");
-			for (int i=0; i<slotLog.size(); i++){
-				long qlen = slotLog.get(i).Qlen;
-				if (slotLog.get(i).time_low <= lastTS){
-					pw.print(qlen+",");
-				}else{
-					break;
-				}
-			}
-			pw.print("];");
-			pw.println();
+
 			
 			pw.print("index_Sarrival=[");
 			for (int i=0; i<slotLog.size(); i++){
@@ -276,17 +218,7 @@ public class Recorder extends Event{
 			}
 			pw.print("];");
 			pw.println();
-			
-			pw.print("task_Spara=[");
-			for (int i=0; i<slotLog.size(); i++){
-				if (slotLog.get(i).time_low <= lastTS){
-					pw.print(slotLog.get(i).parallel_real+",");
-				}else{
-					break;
-				}
-			}
-			pw.print("];");
-			pw.println();
+
 
 			
 			//close the file
@@ -296,8 +228,19 @@ public class Recorder extends Event{
 			e.printStackTrace();
 		}
 	}
-
 	
+	private String getTaskDelayTrace(int queueIndex) {
+		StringBuffer sb = new StringBuffer();
+		sb.append("task_delay=[");
+		for (Task tskTask: tasklog){
+			if ( (tskTask.queueIndex == queueIndex) && (tskTask.rec_outTS <= lastTS)){
+				sb.append(tskTask.rec_outTS - tskTask.rec_inTS).append(",");
+			} 
+		}
+		sb.append("];");
+		return sb.toString();
+	}
+
 	public void updateArrivalEvent(Task task) {
 		// try to find the index of task
 		int index = indexOfTask(task);
@@ -309,13 +252,6 @@ public class Recorder extends Event{
 			tasklog.add(task);
 			// update slot log
 			lastSlotLogObj.arriveNumber ++;
-			if (lastSlotLogObj.idx_task_low == -1) {
-				lastSlotLogObj.idx_task_low = task.taskID;
-				lastSlotLogObj.idx_task_high = task.taskID;
-			}else{
-				lastSlotLogObj.idx_task_low = Math.min(task.taskID, lastSlotLogObj.idx_task_low);
-				lastSlotLogObj.idx_task_high = Math.max(task.taskID, lastSlotLogObj.idx_task_high);
-			}
 		}
 	}
 	
@@ -344,8 +280,8 @@ public class Recorder extends Event{
 		lastSlotLogObj.emittedNumber++;
 	}
 
-	public void addQueueListen(Queue queue) {
-		// TODO Auto-generated method stub
-		queueVector.add(queue);
+	public void init() {
+		
+		
 	}
 }

@@ -11,6 +11,7 @@ class CodingSet{
 
 public class Task {
 	String videoName;
+	int queueIndex;
 	double origBitR;	
 	long userID;
 	long taskID;
@@ -19,33 +20,20 @@ public class Task {
 	long rec_svrID;
 	long rec_currentQlen;
 	double rec_currentWorkSize;
-	int rec_currentSvrNum;
 	
 	double rec_inTS; //time stamp
 	double rec_serveTS;
 	double rec_outTS;
 	String rec_preset;
 
-	@Deprecated
-	public Task(double inTS, double serveTS, double outTS, double bit,
-			long userID, long taskID, ArrayList<CodingSet> codingSets) {
-		super();
-		init(inTS, serveTS, outTS, bit, userID, taskID, codingSets);
-	}
-	
-	@Deprecated
-	public Task(double bit, long userID, long taskID, ArrayList<CodingSet> codingSets) {
-		super();
-		init(0, 0, 0, bit, userID, taskID, codingSets);
-	}
-	
 	public Task() {
 		super();
-//		init(0, 0, 0, 0, -1, -1, null);
 	}
 	
 	public Task(Task task){
+		
 		this.videoName = task.videoName;
+		this.queueIndex = task.queueIndex;
 		this.origBitR = task.origBitR;
 		this.userID = task.userID;
 		this.taskID = task.taskID;
@@ -54,25 +42,13 @@ public class Task {
 		this.rec_svrID = task.rec_svrID;
 		this.rec_currentQlen = task.rec_currentQlen;
 		this.rec_currentWorkSize = task.rec_currentWorkSize;
-		this.rec_currentSvrNum = task.rec_currentSvrNum;
 		
 		this.rec_inTS = task.rec_inTS;
 		this.rec_serveTS = task.rec_serveTS;
 		this.rec_outTS = task.rec_outTS;
-
+		this.rec_preset = task.rec_preset;
 	}
 
-	@Deprecated
-	private void init(double inTS, double serveTS, double outTS, double bit,
-			long userID, long taskID, ArrayList<CodingSet> codingSets){
-		this.rec_inTS = inTS;
-		this.rec_serveTS = serveTS;
-		this.rec_outTS = outTS;
-		this.origBitR = bit;
-		this.userID = userID;
-		this.taskID = taskID;
-		this.codingSets = codingSets;
-	}
 	
 	public CodingSet getCodingResult(String preset){
 		CodingSet cset = null;
@@ -92,6 +68,6 @@ public class Task {
 					.append(",").append(cset.outputBitR).append("], ");
 		}
 		
-		return null;
+		return content.toString();
 	}
 }
