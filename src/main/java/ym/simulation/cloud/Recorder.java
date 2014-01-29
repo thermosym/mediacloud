@@ -41,7 +41,7 @@ public class Recorder extends Event{
 	double interval_qlencheck=1.0;
 
 	ArrayList<Task> tasklog = new ArrayList<Task>();
-	ArrayList<SlotLog> slotLog = new ArrayList<SlotLog>();
+	ArrayList<SlotLog> slotLogList = new ArrayList<SlotLog>();
 	
 	SlotLog lastSlotLogObj;
 	@Override
@@ -66,7 +66,10 @@ public class Recorder extends Event{
 		lastSlotLogObj.QlenVector = QlenVector;
 
 		// insert it into the list
-		slotLog.add(lastSlotLogObj);
+		slotLogList.add(lastSlotLogObj);
+		
+		// in every slot it tries to schedule the job
+		m_simulator.schedule(simulator);
 		
 		// schedule next record
         time += interval_qlencheck;
@@ -76,10 +79,10 @@ public class Recorder extends Event{
 	public double getAvgQlen(int queueIndex){
 		double avg = 0.0;
 		
-		for(int i=0; i<slotLog.size(); i++){
-			avg += slotLog.get(i).QlenVector[queueIndex];
+		for(int i=0; i<slotLogList.size(); i++){
+			avg += slotLogList.get(i).QlenVector[queueIndex];
 		}		
-		avg = (slotLog.size() >0) ? (avg/slotLog.size()) : 0;  
+		avg = (slotLogList.size() >0) ? (avg/slotLogList.size()) : 0;  
 		
 		return avg;
 	}
@@ -109,117 +112,10 @@ public class Recorder extends Event{
 				pw.println(getTaskDelayTrace(i));
 			}
 			
-			pw.print("index_qlen=[");
-			for (int i=0; i<tasklog.size(); i++){
-				double index_qlen = tasklog.get(i).rec_inTS;
-				if (tasklog.get(i).rec_outTS <= lastTS){
-					pw.print(index_qlen+",");
-				}else{
-					break;
-				}
+			// print time slot queue length trace
+			for (int i = 0; i < m_simulator.m_queuVector.size(); i++) {
+				pw.println(getSlotQLenTrace(i));
 			}
-			pw.print("];");
-			pw.println();
-			
-			pw.print("task_qlen=[");
-			for (int i=0; i<tasklog.size(); i++){
-				long qlen = tasklog.get(i).rec_currentQlen;
-				if (tasklog.get(i).rec_outTS <= lastTS){
-					pw.print(qlen+",");
-				}else{
-					break;
-				}
-			}
-			pw.print("];");
-			pw.println();
-			
-			/*
-			 * some thing
-			 */
-			pw.print("task_wsize=[");
-			for (int i=0; i<tasklog.size(); i++){
-				if (tasklog.get(i).rec_outTS <= lastTS){
-					pw.print(tasklog.get(i).rec_currentWorkSize+",");
-				}else{
-					break;
-				}
-			}
-			pw.print("];");
-			pw.println();
-
-			
-			pw.print("index_Sqlen=[");
-			for (int i=0; i<slotLog.size(); i++){
-				double index_qlen = slotLog.get(i).time_low;
-				if (slotLog.get(i).time_low <= lastTS){
-					pw.print(index_qlen+",");
-				}else{
-					break;
-				}
-			}
-			pw.print("];");
-			pw.println();
-			
-
-			
-			pw.print("index_Sqlen=[");
-			for (int i=0; i<slotLog.size(); i++){
-				double index_qlen = slotLog.get(i).time_low;
-				if (slotLog.get(i).time_low <= lastTS){
-					pw.print(index_qlen+",");
-				}else{
-					break;
-				}
-			}
-			pw.print("];");
-			pw.println();
-
-			
-			pw.print("index_Sarrival=[");
-			for (int i=0; i<slotLog.size(); i++){
-				if (slotLog.get(i).time_low <= lastTS){
-					pw.print(slotLog.get(i).time_low+slotLog.get(i).time_interval+",");
-				}else{
-					break;
-				}
-			}
-			pw.print("];");
-			pw.println();
-			
-			pw.print("task_Sarrival=[");
-			for (int i=0; i<slotLog.size(); i++){
-				if (slotLog.get(i).time_low <= lastTS){
-					pw.print(slotLog.get(i).arriveNumber+",");
-				}else{
-					break;
-				}
-			}
-			pw.print("];");
-			pw.println();
-			
-			pw.print("index_Slimit=[");
-			for (int i=0; i<slotLog.size(); i++){
-				if (slotLog.get(i).time_low <= lastTS){
-					pw.print(slotLog.get(i).time_low+",");
-				}else{
-					break;
-				}
-			}
-			pw.print("];");
-			pw.println();
-			
-			pw.print("task_Slimit=[");
-			for (int i=0; i<slotLog.size(); i++){
-				if (slotLog.get(i).time_low <= lastTS){
-					pw.print(slotLog.get(i).parallel+",");
-				}else{
-					break;
-				}
-			}
-			pw.print("];");
-			pw.println();
-
-
 			
 			//close the file
 			pw.close();
@@ -229,9 +125,21 @@ public class Recorder extends Event{
 		}
 	}
 	
+	private String getSlotQLenTrace(int queueIndex) {
+		StringBuffer sb = new StringBuffer();
+		sb.append("slot_Qlen_"+queueIndex+"=[");
+		for (SlotLog log: slotLogList){
+			if ( log.time_low+log.time_interval <= lastTS){
+				sb.append(log.QlenVector[queueIndex]).append(",");
+			}
+		}
+		sb.append("];");
+		return sb.toString();
+	}
+
 	private String getTaskDelayTrace(int queueIndex) {
 		StringBuffer sb = new StringBuffer();
-		sb.append("task_delay=[");
+		sb.append("task_delay_"+queueIndex+"=[");
 		for (Task tskTask: tasklog){
 			if ( (tskTask.queueIndex == queueIndex) && (tskTask.rec_outTS <= lastTS)){
 				sb.append(tskTask.rec_outTS - tskTask.rec_inTS).append(",");
@@ -241,35 +149,11 @@ public class Recorder extends Event{
 		return sb.toString();
 	}
 
-	public void updateArrivalEvent(Task task) {
-		// try to find the index of task
-		int index = indexOfTask(task);
-		
-		if ( index != -1) {
-			// log has this task
-			System.out.println("error! the task is exist!");
-		} else {
-			tasklog.add(task);
-			// update slot log
-			lastSlotLogObj.arriveNumber ++;
-		}
-	}
-	
-	
-	private int indexOfTask(Task task) {
-		int index=-1;
-		for (int i=tasklog.size()-1; i>=0; i--){
-			if (tasklog.get(i) == task){
-				index = i;
-				break;
-			}
-		}
-		if (index !=-1){
-			System.out.println("taskID="+task.taskID);
-		}
-		return index;
-	}
 
+	public void updateArrivalEvent(Task task) {
+		lastSlotLogObj.arriveNumber ++;
+	}
+	
 	public void updateOutEvent(Task taskBeingServed) {
 		// TODO Auto-generated method stub
 		lastSlotLogObj.serverdNumber++;

@@ -84,7 +84,9 @@ public class Queue {
     	// update the log
 //    	record.updateArrivalEvent(task);
     	
-        m_simulator.schedule(simulator); // schedule the task
+        if (!m_simulator.onlySlotSchedule) {
+        	m_simulator.schedule(simulator);
+        }
     }
     
     /**

@@ -47,11 +47,11 @@ public class Generator extends Event {
     	if (task != null){
         	task.rec_inTS = ((Simulator)simulator).now();
         	task.queueIndex = this.queueIndex;
-        	task.rec_preset = "ultrafast"; //TODO: set default preset 
+        	task.rec_preset = "fast"; //TODO: set default preset 
             queue.insert(simulator, task); // insert the task to queue and schedule it
             
-            String contentString = task.getContent(); //TODO: for test
-            System.out.println(contentString);
+            String contentString = task.getContent(); 
+//            System.out.println(contentString);
             
             time += avg_interval; //MyRandom.exponential(avg_interval)
             //time += avg_interval;

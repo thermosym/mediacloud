@@ -25,12 +25,14 @@ class Server extends Event {
     void execute(AbstractSimulator simulator) {
 
     	TaskBeingServed.rec_outTS = ((Simulator)simulator).now();
-    	// update the log
+    	// update the event
     	m_simulator.m_recorder.updateOutEvent(TaskBeingServed);
+    	// store the task log
+    	m_simulator.m_recorder.addLog(TaskBeingServed);
     	
         TaskBeingServed = null; // clear the server
         //try to schedule
-        if (m_simulator.onlySlotSchedule) {
+        if (!m_simulator.onlySlotSchedule) {
         	m_simulator.schedule(simulator);
         }
     }
@@ -85,23 +87,22 @@ public class CloudSimulator extends Simulator {
 	}
 	
 	void routine_show_avg_V(){
-		int max_v = 50; // max_v value;
+		int max_v = 1; // max_v value;
 		double lastTS = 1000.0;
 		
 		for (int i=0; i<max_v; i++){
 			routine_multiQ_v (i, lastTS);
-//			System.out.println("AVG-QLen="+rc.getAvgQlen()
-//					+ "  LOG-Avg-Delay=" + rc.getLogAvgDelay() );
-//			rc.outputRcord("queueData.m",lastTS);
+
 			double avg_qlen[] = new double[m_queuVector.size()];
 			double avg_delay[] = new double[m_queuVector.size()];
 
 			for (int j = 0; j < m_queuVector.size(); j++) {
 				avg_qlen[j] = m_recorder.getAvgQlen(j);
 				avg_delay[j] = m_recorder.getTskAvgDelay(j);
+				System.out.println("qlen="+avg_qlen[j]+"; delay="+avg_delay[j]);
 			}
 			
-			
+			m_recorder.outputRcord("result.m", lastTS);
 		}
 	}
 	
@@ -182,14 +183,21 @@ public class CloudSimulator extends Simulator {
      */
     public void baseSchedule(AbstractSimulator simulator){
 		Server idleServer = getIdleServer();
-		// select a long queue length for dispatching
+
 		if (idleServer != null){
+			// select a long queue length for dispatching
+			Queue maxQueue = null;
+			int maxQlen = 0;
 			for (Queue que: m_queuVector) {
-				if(que.size() > 0){
-					Task tskTask = que.remove();
-					idleServer.serveTask(simulator, tskTask);
-					break;
+				if((que.size() > maxQlen)){
+					maxQueue = que;
+					maxQlen = que.size();
 				}
+			}
+			if (maxQueue!= null){
+				// schedule the selected job
+				Task tskTask = maxQueue.remove();
+				idleServer.serveTask(simulator, tskTask);	
 			}
 		}
     }
