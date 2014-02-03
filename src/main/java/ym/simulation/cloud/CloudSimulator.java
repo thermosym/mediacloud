@@ -79,6 +79,17 @@ public class CloudSimulator extends Simulator {
 	Vector<Server> m_serverVector;
 	Recorder m_recorder;
 	
+    private String all_presets[]={"ultrafast", "superfast", "veryfast", "faster", "fast", 
+			"medium", "slow", "slower", "veryslow" };
+    private int last_preset_index=5;
+    
+	private double VQ_z=0;
+	
+	private double threshold_VQ_z=0;
+	private double threshold_VQ_q=2;
+	
+	
+	
 	public static void main(String[] args) {
 		new CloudSimulator().start();
 	}
@@ -149,8 +160,8 @@ public class CloudSimulator extends Simulator {
 	}
 	
 	public void schedule(AbstractSimulator simulator) {
-		LyapunovSchedule(simulator);
-//		baseSchedule(simulator);
+//		LyapunovSchedule(simulator);
+		baseSchedule(simulator);
 		// maxQSchedule(simulator);
 		
 	}
@@ -214,11 +225,31 @@ public class CloudSimulator extends Simulator {
 		if ((idleServer != null) && (maxQueue != null)) {
 			// schedule the selected job
 			Task tskTask = maxQueue.remove();
+			//set coding preset 
+			tskTask.rec_preset = scheduleCodingPreset_base(tskTask);
 			idleServer.serveTask(simulator, tskTask);
 		}
 	}
     
-    /**
+    private String scheduleCodingPreset_base(Task tskTask) {
+    	String presetString = null;
+
+//    	CodingSet cSet = tskTask.codingSets.get(i);
+		Queue tskQueue = m_queuVector.get(tskTask.queueIndex);
+
+		if ( (tskQueue.size() > threshold_VQ_q) && (last_preset_index>0) ) {
+			last_preset_index--;
+			presetString = all_presets[last_preset_index];
+		}
+		
+		presetString = all_presets[last_preset_index];
+//		for (int i = tskTask.codingSets.size()-1; i >=0; i--) {
+//		}
+		return presetString;
+	}
+
+
+	/**
      * @return server which is idle. If no idle server, then return null.
      */
     public Server getIdleServer(){

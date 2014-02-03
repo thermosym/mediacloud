@@ -28,7 +28,8 @@ public class Generator extends Event {
     
     private ArrayList<Task> traceList;
     private int lastArriveIndex;
-    
+    public String presets[]={"ultrafast", "superfast", "veryfast", "faster", "fast", 
+			"medium", "slow", "slower", "veryslow" };
 
     public Generator(int queueIndex, double lastTS, double avg_interval){
     	this.queueIndex = queueIndex;
@@ -78,8 +79,7 @@ public class Generator extends Event {
 	}
     
 	public void parseTraceTXT(String videoName) {
-		String presets[]={"ultrafast", "superfast", "veryfast", "faster", "fast", 
-				"medium", "slow", "slower", "veryslow" };
+		
 		for (String pset : presets) {
 			// reading data from txt file
 			File file = new File("./trace/"+videoName+pset+".txt");
