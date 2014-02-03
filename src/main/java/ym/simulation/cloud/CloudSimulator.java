@@ -109,7 +109,7 @@ public class CloudSimulator extends Simulator {
 	}
 	
 	void routine_multiQ_v (int v, double lastTS){
-		int serverNum = 2;
+		int serverNum = 4;
 		double avg_interval = 5.0; // for arrival time 5s
 		events = new ListQueue(); // event queue
 		m_serverVector = new Vector<Server>(); // server array
@@ -120,7 +120,7 @@ public class CloudSimulator extends Simulator {
 		
 		
 		for (int i = 0; i < serverNum; i++) {
-			Server server = new Server(i, this, 0.6);
+			Server server = new Server(i, this, 0.3);
 			m_serverVector.add(server);
 		}
 		
@@ -149,8 +149,8 @@ public class CloudSimulator extends Simulator {
 	}
 	
 	public void schedule(AbstractSimulator simulator) {
-		// energySchedule(simulator);
-		baseSchedule(simulator);
+		LyapunovSchedule(simulator);
+//		baseSchedule(simulator);
 		// maxQSchedule(simulator);
 		
 	}
@@ -158,13 +158,26 @@ public class CloudSimulator extends Simulator {
     /*
      * energy efficient schedule: lyapunov algorithm
      */
-//    public void energySchedule(AbstractSimulator simulator){
-//		Server idleServer = getIdleServer();
-//		if (!m_Tasks.isEmpty() && (idleServer != null)) {
-//			Task task = remove(); // get first element
-//			idleServer.serveTask(simulator, task);
-//		}
-//    }
+    public void LyapunovSchedule(AbstractSimulator simulator){
+		Server idleServer = getIdleServer();
+		// select a long queue length for dispatching
+
+		Queue maxQueue = null;
+		int maxQlen = 0;
+		// find the max Q
+		for (Queue que : m_queuVector) {
+			if ((que.size() > maxQlen)) {
+				maxQueue = que;
+				maxQlen = que.size();
+			}
+		}
+
+		if ((idleServer != null) && (maxQueue != null)) {
+			// schedule the selected job
+			Task tskTask = maxQueue.remove();
+			idleServer.serveTask(simulator, tskTask);
+		}
+    }
     
     /*
      * keep the max queue size schedule algorithm
@@ -183,26 +196,27 @@ public class CloudSimulator extends Simulator {
     /*
      * The base schedule: use all the VMs 
      */
-    public void baseSchedule(AbstractSimulator simulator){
-		Server idleServer = getIdleServer();
+	public void baseSchedule(AbstractSimulator simulator) {
 
-		if (idleServer != null){
-			// select a long queue length for dispatching
-			Queue maxQueue = null;
-			int maxQlen = 0;
-			for (Queue que: m_queuVector) {
-				if((que.size() > maxQlen)){
-					maxQueue = que;
-					maxQlen = que.size();
-				}
-			}
-			if (maxQueue!= null){
-				// schedule the selected job
-				Task tskTask = maxQueue.remove();
-				idleServer.serveTask(simulator, tskTask);	
+		Server idleServer = getIdleServer();
+		// select a long queue length for dispatching
+
+		Queue maxQueue = null;
+		int maxQlen = 0;
+		// find the max Q
+		for (Queue que : m_queuVector) {
+			if ((que.size() > maxQlen)) {
+				maxQueue = que;
+				maxQlen = que.size();
 			}
 		}
-    }
+
+		if ((idleServer != null) && (maxQueue != null)) {
+			// schedule the selected job
+			Task tskTask = maxQueue.remove();
+			idleServer.serveTask(simulator, tskTask);
+		}
+	}
     
     /**
      * @return server which is idle. If no idle server, then return null.
