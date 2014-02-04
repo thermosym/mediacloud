@@ -73,7 +73,15 @@ class Server extends Event {
     }
 }
 
+class LyapunovSolver{
+	int para_V=0;
+	double lyapFunc_Z=0;
+	double lyapFunc_Q=0;
+	double threshold_drift=0;
+}
+
 public class CloudSimulator extends Simulator {
+	
 	boolean onlySlotSchedule=true;
 	Vector<Queue> m_queuVector;
 	Vector<Server> m_serverVector;
@@ -81,14 +89,14 @@ public class CloudSimulator extends Simulator {
 	
     private String all_presets[]={"ultrafast", "superfast", "veryfast", "faster", "fast", 
 			"medium", "slow", "slower", "veryslow" };
-    private int last_preset_index=5;
+    private int last_preset_index=6;
     
 	private double VQ_z=0;
 	
 	private double threshold_VQ_z=0;
 	private double threshold_VQ_q=2;
 	
-	
+	LyapunovSolver m_lyaSolver;
 	
 	public static void main(String[] args) {
 		new CloudSimulator().start();
@@ -101,11 +109,29 @@ public class CloudSimulator extends Simulator {
 	
 	void routine_show_avg_V(){
 		int max_v = 1; // max_v value;
-		double lastTS = 500.0;
+		double lastTS = 600.0;
 		
-		for (int i=0; i<max_v; i++){
-			routine_multiQ_v (i, lastTS);
-
+//		for (int i=0; i<max_v; i++){
+//			routine_multiQ_v (i, lastTS);
+//
+//			double avg_qlen[] = new double[m_queuVector.size()];
+//			double avg_delay[] = new double[m_queuVector.size()];
+//
+//			for (int j = 0; j < m_queuVector.size(); j++) {
+//				avg_qlen[j] = m_recorder.getAvgQlen(j);
+//				avg_delay[j] = m_recorder.getTskAvgDelay(j);
+//				System.out.println("qlen="+avg_qlen[j]+"; delay="+avg_delay[j]);
+//			}
+//			
+//			m_recorder.outputRcord("result.m", lastTS);
+//		}
+		
+		String psetStrings[] = {"medium"}; //default preset
+		int v=1;
+		for (String pset: psetStrings){
+			//run simulation
+			routine_multiQ_v (v, lastTS, pset, 1, 1);
+			
 			double avg_qlen[] = new double[m_queuVector.size()];
 			double avg_delay[] = new double[m_queuVector.size()];
 
@@ -115,26 +141,28 @@ public class CloudSimulator extends Simulator {
 				System.out.println("qlen="+avg_qlen[j]+"; delay="+avg_delay[j]);
 			}
 			
-			m_recorder.outputRcord("result.m", lastTS);
+			m_recorder.outputRcord("result_static.m", lastTS);
+			cleaning();
 		}
 	}
-	
-	void routine_multiQ_v (int v, double lastTS){
-		int serverNum = 4;
+
+	private void routine_multiQ_v(int v, double lastTS, String pset, int serverNum, double speedScale){
+		m_lyaSolver = new LyapunovSolver();
+		last_preset_index = getPresetIndex(pset);
+		
 		double avg_interval = 5.0; // for arrival time 5s
 		events = new ListQueue(); // event queue
 		m_serverVector = new Vector<Server>(); // server array
 		m_queuVector = new Vector<Queue>();
 		m_recorder = new Recorder(lastTS,this);  
 		
-		String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_"};
-		
+//		String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_"};
+		String[] videoBaseNameStrings= {"bbb_trans_trace_"};
 		
 		for (int i = 0; i < serverNum; i++) {
-			Server server = new Server(i, this, 0.3);
+			Server server = new Server(i, this, speedScale);
 			m_serverVector.add(server);
 		}
-		
 		
 		for (int i=0; i<videoBaseNameStrings.length; i++) {
 			String videoName = videoBaseNameStrings[i];
@@ -156,57 +184,48 @@ public class CloudSimulator extends Simulator {
 		insert(m_recorder);
 		
 		doAllEvents();
-
 	}
 	
 	public void schedule(AbstractSimulator simulator) {
 //		LyapunovSchedule(simulator);
 		baseSchedule(simulator);
 		// maxQSchedule(simulator);
-		
 	}
 
-    /*
-     * energy efficient schedule: lyapunov algorithm
-     */
     public void LyapunovSchedule(AbstractSimulator simulator){
 		Server idleServer = getIdleServer();
-		// select a long queue length for dispatching
-
-		Queue maxQueue = null;
-		int maxQlen = 0;
+		if (idleServer == null){
+			return; // if no idel server, go back, no need to schedule
+		}
+		
+		// get lyapunov function value
+		double lyapFunc_Q_now =0;
 		// find the max Q
 		for (Queue que : m_queuVector) {
-			if ((que.size() > maxQlen)) {
-				maxQueue = que;
-				maxQlen = que.size();
-			}
+			lyapFunc_Q_now += 0.5*Math.pow(que.size(), 2);
 		}
-
-		if ((idleServer != null) && (maxQueue != null)) {
-			// schedule the selected job
+		// drift
+		double lyapDrift = lyapFunc_Q_now - m_lyaSolver.lyapFunc_Q;
+		
+		if (lyapDrift > m_lyaSolver.threshold_drift) {
+			// need to dispatch a job to the cloud
+			
+			Queue maxQueue = null;
+			int maxQlen = 0;
+			// find the max Q
+			for (Queue que : m_queuVector) {
+				if ((que.size() > maxQlen)) {
+					maxQueue = que;
+					maxQlen = que.size();
+				}
+			}
+			
 			Task tskTask = maxQueue.remove();
+			tskTask.rec_preset = scheduleCodingPreset_lyapunov(tskTask);
 			idleServer.serveTask(simulator, tskTask);
 		}
     }
     
-    /*
-     * keep the max queue size schedule algorithm
-     * 1. when Q > maxQ : increase one VM
-     * 2. when Q < maxQ : decrease one VM
-     */
-//    public void maxQSchedule(AbstractSimulator simulator){
-//    	
-//    	Server idleServer = getIdleServer(); // under server number limit
-//		if (!m_Tasks.isEmpty() && (idleServer != null)) {
-//			Task task = remove(); // get first element
-//			idleServer.serveTask(simulator, task);
-//		}
-//    }
-    
-    /*
-     * The base schedule: use all the VMs 
-     */
 	public void baseSchedule(AbstractSimulator simulator) {
 
 		Server idleServer = getIdleServer();
@@ -226,12 +245,24 @@ public class CloudSimulator extends Simulator {
 			// schedule the selected job
 			Task tskTask = maxQueue.remove();
 			//set coding preset 
-			tskTask.rec_preset = scheduleCodingPreset_base(tskTask);
+//			tskTask.rec_preset = scheduleCodingPreset_baseAdaptive(tskTask);
+			tskTask.rec_preset = scheduleCodingPreset_baseStatic(tskTask);
 			idleServer.serveTask(simulator, tskTask);
 		}
 	}
     
-    private String scheduleCodingPreset_base(Task tskTask) {
+    private String scheduleCodingPreset_lyapunov(Task tskTask) {
+		// TODO Auto-generated method stub
+		return all_presets[last_preset_index];
+	}
+    
+	// always encode video with static preset
+    private String scheduleCodingPreset_baseStatic(Task tskTask) {
+		return all_presets[last_preset_index];
+	}
+
+
+	private String scheduleCodingPreset_baseAdaptive(Task tskTask) {
     	String presetString = null;
 
 //    	CodingSet cSet = tskTask.codingSets.get(i);
@@ -239,7 +270,10 @@ public class CloudSimulator extends Simulator {
 
 		if ( (tskQueue.size() > threshold_VQ_q) && (last_preset_index>0) ) {
 			last_preset_index--;
-			presetString = all_presets[last_preset_index];
+		}else {
+			if (last_preset_index<8) {
+				last_preset_index++;	
+			}
 		}
 		
 		presetString = all_presets[last_preset_index];
@@ -262,4 +296,22 @@ public class CloudSimulator extends Simulator {
     	}
     	return idleS;
     }
+    
+    public int getPresetIndex(String preset){
+    	int psetIndex = 0;
+    	for (int i = 0; i < all_presets.length; i++) {
+			if (all_presets[i].equals(preset)) {
+				psetIndex = i;
+				break;
+			}
+		}
+    	return psetIndex;
+    }
+    
+	private void cleaning() {
+		// TODO Auto-generated method stub
+		m_queuVector.removeAllElements();
+		m_serverVector.removeAllElements();
+		m_recorder.removeAllData();
+	}
 }

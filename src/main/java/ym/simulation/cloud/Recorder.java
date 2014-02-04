@@ -117,6 +117,11 @@ public class Recorder extends Event{
 				pw.println(getSlotQLenTrace(i));
 			}
 			
+			// print preset
+			for (int i = 0; i < m_simulator.m_queuVector.size(); i++) {
+				pw.println(getTaskPresetTrace(i));
+			}
+			
 			//close the file
 			pw.close();
 		} catch (Exception e) {
@@ -125,6 +130,7 @@ public class Recorder extends Event{
 		}
 	}
 	
+
 	private String getSlotQLenTrace(int queueIndex) {
 		StringBuffer sb = new StringBuffer();
 		sb.append("slot_Qlen_"+queueIndex+"=[");
@@ -149,6 +155,17 @@ public class Recorder extends Event{
 		return sb.toString();
 	}
 
+	private String getTaskPresetTrace(int queueIndex) {
+		StringBuffer sb = new StringBuffer();
+		sb.append("task_preset_"+queueIndex+"=[");
+		for (Task tskTask: tasklog){
+			if ( (tskTask.queueIndex == queueIndex) && (tskTask.rec_outTS <= lastTS)){
+				sb.append(m_simulator.getPresetIndex(tskTask.rec_preset)).append(",");
+			}
+		}
+		sb.append("];");
+		return sb.toString();
+	}
 
 	public void updateArrivalEvent(Task task) {
 		lastSlotLogObj.arriveNumber ++;
@@ -167,5 +184,10 @@ public class Recorder extends Event{
 	public void init() {
 		
 		
+	}
+
+	public void removeAllData() {
+		tasklog.clear();
+		slotLogList.clear();
 	}
 }
