@@ -200,10 +200,12 @@ public class CloudSimulator extends Simulator {
 		
 		// get lyapunov function value
 		double lyapFunc_Q_now =0;
+		
 		// find the max Q
 		for (Queue que : m_queuVector) {
 			lyapFunc_Q_now += 0.5*Math.pow(que.size(), 2);
 		}
+		
 		// drift
 		double lyapDrift = lyapFunc_Q_now - m_lyaSolver.lyapFunc_Q;
 		
