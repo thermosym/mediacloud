@@ -13,10 +13,12 @@ class SlotLog {
 	double time_low;
 	double time_interval;
 	int[] QlenVector;
+	double Zlen;
 	long arriveNumber;
 	long serverdNumber;
 	long emittedNumber;
 	int parallel;
+
 	
 	public SlotLog(double time_low, double time_interval){
 		this.time_low = time_low;
@@ -30,15 +32,16 @@ class SlotLog {
 }
 
 public class Recorder extends Event{
-	public Recorder(double lastTS, CloudSimulator sim) {
+	public Recorder(double lastTS, CloudSimulator sim, double slot_interval) {
 		super();
 		this.lastTS = lastTS;
 		this.m_simulator = sim;
+		this.slot_interval = slot_interval;
 	}
 	CloudSimulator m_simulator;
-	
+	double slot_interval;
 	double lastTS;
-	double interval_qlencheck=0.1;
+	
 
 	ArrayList<Task> tasklog = new ArrayList<Task>();
 	ArrayList<SlotLog> slotLogList = new ArrayList<SlotLog>();
@@ -48,7 +51,7 @@ public class Recorder extends Event{
 	void execute(AbstractSimulator simulator) {		 
 		// new slot event log
 		lastSlotLogObj = new SlotLog(m_simulator.now(), 
-				interval_qlencheck)  ;
+				slot_interval)  ;
 		// parallel 
 		int parallel_num=0;
 		for (Server svr : m_simulator.m_serverVector) {
@@ -59,12 +62,15 @@ public class Recorder extends Event{
 		lastSlotLogObj.parallel = parallel_num;
 		
 		// update queue length
-		int[] QlenVector = new int[m_simulator.m_queuVector.size()];
+		int[] QlenVector = new int[m_simulator.m_queueVector.size()];
 		for (int i = 0; i < QlenVector.length; i++) {
-			QlenVector[i] = m_simulator.m_queuVector.get(i).size();
+			QlenVector[i] = m_simulator.m_queueVector.get(i).size();
 		}
 		lastSlotLogObj.QlenVector = QlenVector;
 
+		//update Zlen
+		lastSlotLogObj.Zlen = m_simulator.m_lyaSolver.vqueue_Z; 
+				
 		// insert it into the list
 		slotLogList.add(lastSlotLogObj);
 		
@@ -72,7 +78,7 @@ public class Recorder extends Event{
 		m_simulator.schedule(simulator);
 		
 		// schedule next record
-        time += interval_qlencheck;
+        time += slot_interval;
         if (time < lastTS) simulator.insert(this);
 	}
 	
@@ -108,19 +114,22 @@ public class Recorder extends Event{
 					new OutputStreamWriter(new FileOutputStream(outFile)), true);
 						
 			// print delay trace
-			for (int i = 0; i < m_simulator.m_queuVector.size(); i++) {
+			for (int i = 0; i < m_simulator.m_queueVector.size(); i++) {
 				pw.println(getTaskDelayTrace(i));
 			}
 			
-			// print time slot queue length trace
-			for (int i = 0; i < m_simulator.m_queuVector.size(); i++) {
+			// print preset
+			for (int i = 0; i < m_simulator.m_queueVector.size(); i++) {
+				pw.println(getTaskPresetTrace(i));
+			}
+			
+			// print time slot--queue length trace
+			for (int i = 0; i < m_simulator.m_queueVector.size(); i++) {
 				pw.println(getSlotQLenTrace(i));
 			}
 			
-			// print preset
-			for (int i = 0; i < m_simulator.m_queuVector.size(); i++) {
-				pw.println(getTaskPresetTrace(i));
-			}
+			// print time slot--virtual queue length trace
+			pw.println(getSlotZLenTrace());
 			
 			//close the file
 			pw.close();
@@ -137,6 +146,19 @@ public class Recorder extends Event{
 		for (SlotLog log: slotLogList){
 			if ( log.time_low+log.time_interval <= lastTS){
 				sb.append(log.QlenVector[queueIndex]).append(",");
+			}
+		}
+		sb.append("];");
+		return sb.toString();
+	}
+	
+
+	private String getSlotZLenTrace() {
+		StringBuffer sb = new StringBuffer();
+		sb.append("slot_Zlen=[");
+		for (SlotLog log: slotLogList){
+			if ( log.time_low+log.time_interval <= lastTS){
+				sb.append(log.Zlen).append(",");
 			}
 		}
 		sb.append("];");

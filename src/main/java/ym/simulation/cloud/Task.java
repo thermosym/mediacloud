@@ -70,4 +70,15 @@ public class Task {
 		
 		return content.toString();
 	}
+
+	public double getMinBitrate() {
+		double min=Double.MAX_VALUE;
+		// get the minimal coding time
+		for (CodingSet cSet : codingSets) {
+			if (cSet.outputBitR <= min) {
+				min = cSet.outputBitR;
+			}
+		}
+		return min;
+	}
 }

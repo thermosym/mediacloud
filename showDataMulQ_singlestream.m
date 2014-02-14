@@ -32,15 +32,17 @@ ylim([0 maxQlen*1.1]);
 xlabel('Queu length','FontSize',10,'FontWeight','bold');
 ylabel('Probability','FontSize',10,'FontWeight','bold');
 
-% figure;
-% plot(t_Slot*Tslot,slot_Qlen_0,'*-b');hold on;
-% plot(t_Slot*Tslot,slot_Qlen_1,'s-r');
-% legend('bbb','ele','Location','NorthWest');
-% title('Queue length');
-% xlabel('time slot(s)','FontSize',20,'FontWeight','bold');
-% ylabel('Waiting job number','FontSize',20,'FontWeight','bold');
+figure;
+plot(t_Slot*Tslot,slot_Qlen_0,'*-b');
+legend('bbb','ele','Location','NorthWest');
+title('Queue length');
+xlabel('time slot(s)','FontSize',20,'FontWeight','bold');
+ylabel('Waiting job number','FontSize',20,'FontWeight','bold');
 
-% figure;
-% preset0 = task_preset_0(1:89);
-% index_preset = 1:1:length(preset0);
-% plot(index_preset,preset0,'*--b');
+figure;
+preset0 = task_preset_0;
+index_preset = 1:1:length(task_preset_0);
+plot(index_preset,preset0,'*--b');
+
+figure;
+plot(t_Slot*Tslot,slot_Zlen,'-b');

@@ -92,16 +92,22 @@ public class Queue {
     /**
     * @return the first Task in the queue
     */
-    Task remove() {
-        Task Task = (Task) m_Tasks.firstElement();
+    public Task remove() {
+        Task task = (Task) m_Tasks.firstElement();
         m_Tasks.removeElementAt(0);
-        return Task;
+        return task;
     }
     
     public int size() {
         return m_Tasks.size();
     }
     
-
+    public Task getHead() {
+    	if (m_Tasks.size() > 0) {
+			return (Task)m_Tasks.firstElement();
+		}else{
+			return null;
+		}
+    }
 
 }
