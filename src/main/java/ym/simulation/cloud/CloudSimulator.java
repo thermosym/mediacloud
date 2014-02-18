@@ -100,7 +100,7 @@ public class CloudSimulator extends Simulator {
 		double avg_interval = 5.0; // for arrival time 5s
 		double slot_interval = 0.1; // time slot interval
 		events = new ListQueue(); // event queue
-		m_cluster = new ClusterManager(serverNum, this, speedScale); //TODO: server holds queue 
+		m_cluster = new ClusterManager(serverNum, this, speedScale); //TODO: server holds queue, go on test
 		
 		m_queueVector = new Vector<Queue>();
 		m_recorder = new Recorder(lastTS,this,slot_interval);  
