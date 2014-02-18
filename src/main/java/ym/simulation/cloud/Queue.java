@@ -83,10 +83,10 @@ public class Queue {
     	m_Tasks.addElement(task);
     	// update the log
 //    	record.updateArrivalEvent(task);
-    	
-        if (!m_simulator.onlySlotSchedule) {
-        	m_simulator.schedule(simulator);
-        }
+//    	
+//        if (!m_simulator.onlySlotSchedule) {
+//        	m_simulator.schedule(simulator);
+//        }
     }
     
     /**

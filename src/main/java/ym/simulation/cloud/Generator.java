@@ -19,13 +19,14 @@ public class Generator extends Event {
     
     private ArrayList<Task> traceList;
     private int lastArriveIndex;
-    public String presets[]={"ultrafast", "superfast", "veryfast", "faster", "fast", 
-			"medium", "slow", "slower", "veryslow" };
+    public String presets[];
+    // ={"ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow" };
 
-    public Generator(int queueIndex, double lastTS, double avg_interval){
+    public Generator(int queueIndex, double lastTS, double avg_interval, String pset[]){
     	this.queueIndex = queueIndex;
     	this.lastTS = lastTS;
     	this.avg_interval = avg_interval;
+    	this.presets = pset;
     	m_taskIndex = 0;
     	traceList = new ArrayList<Task>();
     	lastArriveIndex = 0;
@@ -39,10 +40,10 @@ public class Generator extends Event {
     	if (task != null){
         	task.rec_inTS = ((Simulator)simulator).now();
         	task.queueIndex = this.queueIndex;
-        	task.rec_preset = "fast"; //TODO: set default preset 
+        	task.rec_preset = "fast"; //TODO: will be set on fly, here is useless 
             queue.insert(simulator, task); // insert the task to queue and schedule it
             
-            String contentString = task.getContent(); 
+//            String contentString = task.getContent(); 
 //            System.out.println(contentString);
             
             time += avg_interval; //MyRandom.exponential(avg_interval)

@@ -54,7 +54,7 @@ public class Recorder extends Event{
 				slot_interval)  ;
 		// parallel 
 		int parallel_num=0;
-		for (Server svr : m_simulator.m_serverVector) {
+		for (Server svr : m_simulator.m_cluster.m_serverVector) {
 			if (!svr.isAvailable()){
 				parallel_num++;
 			}
