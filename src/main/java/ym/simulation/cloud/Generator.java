@@ -11,14 +11,15 @@ import java.util.ArrayList;
 * Generate a stream of Tasks for 8.0 time units.
 */
 public class Generator extends Event {
-    Queue queue;
     int queueIndex;
     long m_taskIndex;
     double lastTS;
     double avg_interval;
+    ClusterManager m_cm;
     
     private ArrayList<Task> traceList;
     private int lastArriveIndex;
+    
     public String presets[];
     // ={"ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow" };
 
@@ -41,14 +42,16 @@ public class Generator extends Event {
         	task.rec_inTS = ((Simulator)simulator).now();
         	task.queueIndex = this.queueIndex;
         	task.rec_preset = "fast"; //TODO: will be set on fly, here is useless 
-            queue.insert(simulator, task); // insert the task to queue and schedule it
+            m_cm.insertTask(task); // insert the task to queue and schedule it
             
 //            String contentString = task.getContent(); 
 //            System.out.println(contentString);
             
             time += avg_interval; //MyRandom.exponential(avg_interval)
-            //time += avg_interval;
-            if (time < lastTS) simulator.insert(this);    		
+
+            if (time < lastTS) { // next
+            	simulator.insert(this);    		
+            }
     	}
     }
     

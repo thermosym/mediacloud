@@ -83,10 +83,6 @@ public class Queue {
     	m_Tasks.addElement(task);
     	// update the log
 //    	record.updateArrivalEvent(task);
-//    	
-//        if (!m_simulator.onlySlotSchedule) {
-//        	m_simulator.schedule(simulator);
-//        }
     }
     
     /**
@@ -102,6 +98,16 @@ public class Queue {
         return m_Tasks.size();
     }
     
+    public double getQueueWorkload(){
+    	double workload=0;
+    	
+    	String presetString = m_simulator.m_cluster.m_schedulor.getPreset_default();
+    	for (Task tskTask : m_Tasks) {
+			workload += tskTask.getCodingResult(presetString).codingTime;
+		}
+    	return workload;
+    }
+    
     public Task getHead() {
     	if (m_Tasks.size() > 0) {
 			return (Task)m_Tasks.firstElement();
@@ -109,5 +115,13 @@ public class Queue {
 			return null;
 		}
     }
+
+	public boolean isempty() {
+		if (m_Tasks.size() > 0) {
+			return false;
+		}else {
+			return true;
+		}
+	}
 
 }

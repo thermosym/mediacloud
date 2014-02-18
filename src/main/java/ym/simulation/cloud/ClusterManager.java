@@ -5,34 +5,34 @@ import java.util.Vector;
 public class ClusterManager {
 	CloudSimulator m_simulator;
 	Vector<Server> m_serverVector;
-	Vector<Task> m_bufferTask;
+	Schedulor m_schedulor;
 	
 	public ClusterManager(int serverNum, CloudSimulator simulator, double speedScale){
 		
 		m_simulator = simulator;
 		m_serverVector = new Vector<Server>(); // server array
-		m_bufferTask = new Vector<Task>();
+		
 		
 		for (int i = 0; i < serverNum; i++) {
-			Server server = new Server(i, simulator, speedScale);
+			Server server = new Server(i, speedScale, simulator, this);
 			m_serverVector.add(server);
 		}
 	}
 	
-	public double getResidualWorkTime(){
-    	double residual_time = 0;
-    	// residual time on servers
-    	for (Server svr : m_serverVector) {
-			residual_time += svr.getResidualTime();
-		}
-    	// residual time on buffer queue
-    	for (Task tskTask : m_bufferTask) {
-			residual_time += tskTask.getCodingResult(tskTask.rec_preset).codingTime;
-		}
-    	
-    	return residual_time/m_serverVector.get(0).m_speedScale+0.01;
-	}
-	
+//	public double getResidualWorkTime(){
+//    	double residual_time = 0;
+//    	// residual time on servers
+//    	for (Server svr : m_serverVector) {
+//			residual_time += svr.getResidualTime();
+//		}
+//    	// residual time on buffer queue
+//    	for (Task tskTask : m_bufferTask) {
+//			residual_time += tskTask.getCodingResult(tskTask.rec_preset).codingTime;
+//		}
+//    	
+//    	return residual_time/m_serverVector.get(0).m_speedScale+0.01;
+//	}
+//	
     public Server getIdleServer(){
     	Server idleS = null;
     	for(Server s:m_serverVector){
@@ -70,11 +70,38 @@ public class ClusterManager {
 		m_bufferTask.removeAllElements();
 	}
 
-	public Task getNextjob() {
+	public Task getNextjob(Server svr) {
+		// get the next job to be serve
 		Task tskTask=null;
-		if (!m_bufferTask.isEmpty()) {
-			tskTask = m_bufferTask.remove(0);
+		if (!svr.m_taskQueue.isempty()) {
+			tskTask = svr.m_taskQueue.remove(); // get the first task
 		}
+		// schedule the task preset
+		
 		return tskTask;
+	}
+
+	public void insertTask(Task task) {
+		// insert the task to the shortest queue
+		Server svrServer = findShortServer();
+		if (svrServer != null) {
+			svrServer.m_taskQueue.insert(m_simulator, task);
+		}else {
+			System.err.println("null server");
+		}
+	}
+
+	private Server findShortServer() {
+		// find the shortest queue
+		Server minSvr=null;
+		double backlog=Double.MAX_VALUE;
+		
+		for (Server svr : m_serverVector) {
+			if (svr.m_taskQueue.size() < backlog) {
+				backlog = svr.m_taskQueue.size();
+				minSvr = svr;
+			}
+		}
+		return minSvr;
 	}
 }
