@@ -26,6 +26,7 @@ public class Schedulor {
 	public void setV(double v) {
 		V = v;
 	}
+
 }
 
 class BaseSchedulor extends Schedulor{
@@ -58,60 +59,61 @@ class LyapunovSchedulor extends Schedulor{
 	}
 	
 	public String SchedulePreset(Server svr, Task tsk){
-    	// update the lyapunov virtual queue, even no schedule
-    	vqueue_Z = svr.getResidualTime();
-		
-		// drift
-		double D=0;
-		double base_drift = m_lyaSolver.para_V * D + m_lyaSolver.vqueue_Z*(0-m_cluster.getECtime()) ;
-		double min_drift = Double.MAX_VALUE;
-		int min_drift_i=0;
-		int min_drift_j=0;
-		double[][] func = new double[m_queueVector.size()][all_presets.length];
-		
-		for (int i = 0; i < m_queueVector.size(); i++) {
-			if (m_queueVector.get(i).size() > 0) {
-				// this queue has job
-				for (int j = 0; j < all_presets.length; j++) {
-					Task job = m_queueVector.get(i).getHead();
-					CodingSet codingSet = job.codingSets.get(j);
-					D = (codingSet.outputBitR - job.getMinBitrate())/job.getMinBitrate();
-					// the function of drift
-					double vd = m_lyaSolver.para_V *1* D/100.0;
-					double qsize = m_queueVector.get(i).size();
-					double zsize = m_lyaSolver.vqueue_Z;
-					double ct = codingSet.codingTime;
-//					double max_et = m_recorder.slot_interval * m_cluster.m_serverVector.size();
-					double max_et = m_cluster.getECtime();
-					func[i][j] = vd - qsize +zsize*(ct - max_et);  
-
-					if (func[i][j] < min_drift) {
-						min_drift = func[i][j]; 
-						min_drift_i = i;
-						min_drift_j = j;
-					}
-					
-					System.out.println("jq-"+i+"--set="+j+", D="+D+", q="+qsize+", z="+zsize+", ct="+ct+", et="+max_et);
-				}
-			}
-		}
-		
-		// find the optimal strategy and schedule it
-		Queue selectedQueue = m_queueVector.get(min_drift_i);
-		if (selectedQueue.size() > 0) {
-			Task tskTask = selectedQueue.remove();
-			tskTask.rec_preset = all_presets[min_drift_j];
-			m_cluster.serveTask(tskTask);
-			
-			// print the func
-			System.out.print("t="+now()+"|| preset="+min_drift_j +" || ");
-			for (double[] es : func) {
-				for (double e : es) {
-					System.out.print(e+",");
-				}
-			}
-			System.out.println();
-		}
-
+//    	// update the lyapunov virtual queue, even no schedule
+//    	vqueue_Z = svr.getResidualTime();
+//		
+//		// drift
+//		double D=0;
+//		double base_drift = m_lyaSolver.para_V * D + m_lyaSolver.vqueue_Z*(0-m_cluster.getECtime()) ;
+//		double min_drift = Double.MAX_VALUE;
+//		int min_drift_i=0;
+//		int min_drift_j=0;
+//		double[][] func = new double[m_queueVector.size()][all_presets.length];
+//		
+//		for (int i = 0; i < m_queueVector.size(); i++) {
+//			if (m_queueVector.get(i).size() > 0) {
+//				// this queue has job
+//				for (int j = 0; j < all_presets.length; j++) {
+//					Task job = m_queueVector.get(i).getHead();
+//					CodingSet codingSet = job.codingSets.get(j);
+//					D = (codingSet.outputBitR - job.getMinBitrate())/job.getMinBitrate();
+//					// the function of drift
+//					double vd = m_lyaSolver.para_V *1* D/100.0;
+//					double qsize = m_queueVector.get(i).size();
+//					double zsize = m_lyaSolver.vqueue_Z;
+//					double ct = codingSet.codingTime;
+////					double max_et = m_recorder.slot_interval * m_cluster.m_serverVector.size();
+//					double max_et = m_cluster.getECtime();
+//					func[i][j] = vd - qsize +zsize*(ct - max_et);  
+//
+//					if (func[i][j] < min_drift) {
+//						min_drift = func[i][j]; 
+//						min_drift_i = i;
+//						min_drift_j = j;
+//					}
+//					
+//					System.out.println("jq-"+i+"--set="+j+", D="+D+", q="+qsize+", z="+zsize+", ct="+ct+", et="+max_et);
+//				}
+//			}
+//		}
+//		
+//		// find the optimal strategy and schedule it
+//		Queue selectedQueue = m_queueVector.get(min_drift_i);
+//		if (selectedQueue.size() > 0) {
+//			Task tskTask = selectedQueue.remove();
+//			tskTask.rec_preset = all_presets[min_drift_j];
+//			m_cluster.serveTask(tskTask);
+//			
+//			// print the func
+//			System.out.print("t="+now()+"|| preset="+min_drift_j +" || ");
+//			for (double[] es : func) {
+//				for (double e : es) {
+//					System.out.print(e+",");
+//				}
+//			}
+//			System.out.println();
+//		}
+//
+		return m_preset_default;
     }
 }

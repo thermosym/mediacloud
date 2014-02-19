@@ -19,20 +19,6 @@ public class ClusterManager {
 		}
 	}
 	
-//	public double getResidualWorkTime(){
-//    	double residual_time = 0;
-//    	// residual time on servers
-//    	for (Server svr : m_serverVector) {
-//			residual_time += svr.getResidualTime();
-//		}
-//    	// residual time on buffer queue
-//    	for (Task tskTask : m_bufferTask) {
-//			residual_time += tskTask.getCodingResult(tskTask.rec_preset).codingTime;
-//		}
-//    	
-//    	return residual_time/m_serverVector.get(0).m_speedScale+0.01;
-//	}
-//	
     public Server getIdleServer(){
     	Server idleS = null;
     	for(Server s:m_serverVector){
@@ -44,30 +30,21 @@ public class ClusterManager {
     	return idleS;
     }
 	
-	public double getECtime() {
-		// get executed computing time
-		int num_running_svr=0;
-		for (Server svr : m_serverVector) {
-			if (!svr.isAvailable()) {
-				num_running_svr++;
-			}
-		}
-		
-		return m_simulator.m_recorder.slot_interval*num_running_svr;
-	}
+//	public double getECtime() {
+//		// get executed computing time
+//		int num_running_svr=0;
+//		for (Server svr : m_serverVector) {
+//			if (!svr.isAvailable()) {
+//				num_running_svr++;
+//			}
+//		}
+//		
+//		return m_simulator.m_recorder.slot_interval*num_running_svr;
+//	}
 
-	public void serveTask(Task tskTask) {
-		Server svrServer = getIdleServer();
-		if (m_bufferTask.isEmpty() && svrServer!=null) {
-			svrServer.serveTask(m_simulator, tskTask);
-		}else {
-			m_bufferTask.add(tskTask);
-		}
-	}
 
 	public void clean() {
 		m_serverVector.removeAllElements();
-		m_bufferTask.removeAllElements();
 	}
 
 	public Task getNextjob(Server svr) {
@@ -76,21 +53,27 @@ public class ClusterManager {
 		if (!svr.m_taskQueue.isempty()) {
 			tskTask = svr.m_taskQueue.remove(); // get the first task
 		}
-		// schedule the task preset
-		
 		return tskTask;
 	}
-
+	
+	// insert the task to a queue (server)
 	public void insertTask(Task task) {
 		// insert the task to the shortest queue
 		Server svrServer = findShortServer();
 		if (svrServer != null) {
 			svrServer.m_taskQueue.insert(m_simulator, task);
+			// try schedule
+			if (svrServer.isAvailable()) {
+				Task tskServe = getNextjob(svrServer);
+				svrServer.serveTask(m_simulator, tskServe);
+//				System.out.println("try scehdule:"+tskServe.getContent());
+			}
 		}else {
 			System.err.println("null server");
 		}
 	}
 
+	//TODO: need to revise for real backlog: lyapunov
 	private Server findShortServer() {
 		// find the shortest queue
 		Server minSvr=null;

@@ -7,46 +7,29 @@ import java.io.PrintWriter;
 import java.lang.invoke.ConstantCallSite;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Vector;
 
-class SlotLog {
-	double time_low;
-	double time_interval;
-	int[] QlenVector;
-	double Zlen;
-	long arriveNumber;
-	long serverdNumber;
-	long emittedNumber;
-	int parallel;
-
-	
-	public SlotLog(double time_low, double time_interval){
-		this.time_low = time_low;
-		this.time_interval = time_interval;
-		
-		this.arriveNumber = 0;
-		this.serverdNumber = 0;
-		this.emittedNumber = 0;
-		this.parallel = 0;
-	}
-}
-
 public class Recorder extends Event{
+	SlotLog lastSlotLogObj;
+	double lastTS;
+	CloudSimulator m_simulator;
+	double slot_interval;
+	
+
+	ArrayList<SlotLog> slotLogList = new ArrayList<SlotLog>();
+	ArrayList<Task> tasklog = new ArrayList<Task>();
+	
 	public Recorder(double lastTS, CloudSimulator sim, double slot_interval) {
 		super();
 		this.lastTS = lastTS;
 		this.m_simulator = sim;
 		this.slot_interval = slot_interval;
 	}
-	CloudSimulator m_simulator;
-	double slot_interval;
-	double lastTS;
+	public void addLog(Task tsk){
+		tasklog.add(tsk);
+	}
 	
-
-	ArrayList<Task> tasklog = new ArrayList<Task>();
-	ArrayList<SlotLog> slotLogList = new ArrayList<SlotLog>();
-	
-	SlotLog lastSlotLogObj;
 	@Override
 	void execute(AbstractSimulator simulator) {		 
 		// new slot event log
@@ -62,27 +45,64 @@ public class Recorder extends Event{
 		lastSlotLogObj.parallel = parallel_num;
 		
 		// update queue length
-		int[] QlenVector = new int[m_simulator.m_queueVector.size()];
+		int[] QlenVector = new int[m_simulator.m_cluster.m_serverVector.size()];
+		double[] QbacklogVector = new double[m_simulator.m_cluster.m_serverVector.size()];
 		for (int i = 0; i < QlenVector.length; i++) {
-			QlenVector[i] = m_simulator.m_queueVector.get(i).size();
+			Server svr = m_simulator.m_cluster.m_serverVector.get(i);
+			int qlen =0;
+			qlen += svr.isAvailable() ? 0:1;
+			qlen += svr.m_taskQueue.size();
+			QlenVector[i] = qlen;
+			
+			QbacklogVector[i] = svr.getResidualBacklogTime();
 		}
 		lastSlotLogObj.QlenVector = QlenVector;
-
-		//update Zlen
-		lastSlotLogObj.Zlen = m_simulator.m_lyaSolver.vqueue_Z; 
-				
+		lastSlotLogObj.QbacklogVector = QbacklogVector;
+		
 		// insert it into the list
 		slotLogList.add(lastSlotLogObj);
-		
-		// in every slot it tries to schedule the job
-		m_simulator.schedule(simulator);
-		
+			
 		// schedule next record
         time += slot_interval;
-        if (time < lastTS) simulator.insert(this);
+        
+        if (time < lastTS) {
+        	simulator.insert(this);
+        }
+	}
+	private double getAvgQBacklog(int queueIndex) {
+		double avg = 0.0;
+		
+		for(int i=0; i<slotLogList.size(); i++){
+			avg += slotLogList.get(i).QbacklogVector[queueIndex];
+		}		
+		avg = (slotLogList.size() >0) ? (avg/slotLogList.size()) : 0;  
+		
+		return avg;
 	}
 	
-	public double getAvgQlen(int queueIndex){
+	public String getAvgQBacklogArrayString(){
+		StringBuffer sb = new StringBuffer();
+		sb.append("[");
+		for (int i = 0; i < m_simulator.m_cluster.m_serverVector.size(); i++) {
+			sb.append(getAvgQBacklog(i)).append(",");
+		}
+		sb.append("];");
+		return sb.toString();
+	}
+	
+	private String getAvgQBacklogSingelString(){
+		double avg=0;
+		StringBuffer sb = new StringBuffer();
+		sb.append("avg_QBacklog=");
+		for (int i = 0; i < m_simulator.m_cluster.m_serverVector.size(); i++) {
+			avg += getAvgQBacklog(i);
+		}
+		avg = avg/m_simulator.m_cluster.m_serverVector.size();
+		sb.append(avg).append(";");
+		return sb.toString();		
+	}
+	
+	private double getAvgQlen(int queueIndex){
 		double avg = 0.0;
 		
 		for(int i=0; i<slotLogList.size(); i++){
@@ -93,53 +113,28 @@ public class Recorder extends Event{
 		return avg;
 	}
 	
-	public double getTskAvgDelay(int queueIndex){
-		double avg=0.0;
-		for (Task tskTask : tasklog) {
-			if (tskTask.queueIndex == queueIndex){
-				avg += tskTask.rec_outTS - tskTask.rec_inTS;	
-			}
+	public String getAvgQlenArrayString(){
+		StringBuffer sb = new StringBuffer();
+		sb.append("[");
+		for (int i = 0; i < m_simulator.m_cluster.m_serverVector.size(); i++) {
+			sb.append(getAvgQlen(i)).append(",");
 		}
-		avg = (tasklog.size()>0) ? (avg/tasklog.size()) : 0;
-		return avg;
+		sb.append("];");
+		return sb.toString();
 	}
 
-	public void addLog(Task tsk){
-		tasklog.add(tsk);
-	}
-	
-	public void outputRcord(String outFile, double lastTS) {
-		try {
-			PrintWriter pw = new PrintWriter(
-					new OutputStreamWriter(new FileOutputStream(outFile)), true);
-						
-			// print delay trace
-			for (int i = 0; i < m_simulator.m_queueVector.size(); i++) {
-				pw.println(getTaskDelayTrace(i));
-			}
-			
-			// print preset
-			for (int i = 0; i < m_simulator.m_queueVector.size(); i++) {
-				pw.println(getTaskPresetTrace(i));
-			}
-			
-			// print time slot--queue length trace
-			for (int i = 0; i < m_simulator.m_queueVector.size(); i++) {
-				pw.println(getSlotQLenTrace(i));
-			}
-			
-			// print time slot--virtual queue length trace
-			pw.println(getSlotZLenTrace());
-			
-			//close the file
-			pw.close();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+	private String getAvgQlenSingelString(){
+		double avg=0;
+		StringBuffer sb = new StringBuffer();
+		sb.append("avg_Qlen=");
+		for (int i = 0; i < m_simulator.m_cluster.m_serverVector.size(); i++) {
+			avg += getAvgQlen(i);
 		}
+		avg = avg/m_simulator.m_cluster.m_serverVector.size();
+		sb.append(avg).append(";");
+		return sb.toString();		
 	}
 	
-
 	private String getSlotQLenTrace(int queueIndex) {
 		StringBuffer sb = new StringBuffer();
 		sb.append("slot_Qlen_"+queueIndex+"=[");
@@ -151,56 +146,113 @@ public class Recorder extends Event{
 		sb.append("];");
 		return sb.toString();
 	}
-	
 
-	private String getSlotZLenTrace() {
+	private String getTaskAvgDelaySingleString(int videoIndex) {
 		StringBuffer sb = new StringBuffer();
-		sb.append("slot_Zlen=[");
-		for (SlotLog log: slotLogList){
-			if ( log.time_low+log.time_interval <= lastTS){
-				sb.append(log.Zlen).append(",");
-			}
-		}
-		sb.append("];");
+		sb.append("avg_delay_"+videoIndex+"=");
+		sb.append(getTskAvgDelay(m_simulator.videoBaseNameStrings[videoIndex])).append(";");
 		return sb.toString();
 	}
 
-	private String getTaskDelayTrace(int queueIndex) {
+
+	private String getTaskAvgQualitySingleString(int videoIndex) {
 		StringBuffer sb = new StringBuffer();
-		sb.append("task_delay_"+queueIndex+"=[");
-		for (Task tskTask: tasklog){
-			if ( (tskTask.queueIndex == queueIndex) && (tskTask.rec_outTS <= lastTS)){
-				sb.append(tskTask.rec_outTS - tskTask.rec_inTS).append(",");
-			} 
-		}
-		sb.append("];");
+		sb.append("slot_quality_"+videoIndex+"=");
+		sb.append(getTskAvgQuality(m_simulator.videoBaseNameStrings[videoIndex])).append(";");
 		return sb.toString();
 	}
 
-	private String getTaskPresetTrace(int queueIndex) {
+
+	private String getTaskDelayTrace(int vNameIndex) {
+		LinkedList<Task> loglist = getTasklog(m_simulator.videoBaseNameStrings[vNameIndex]);
+		
 		StringBuffer sb = new StringBuffer();
-		sb.append("task_preset_"+queueIndex+"=[");
-		for (Task tskTask: tasklog){
-			if ( (tskTask.queueIndex == queueIndex) && (tskTask.rec_outTS <= lastTS)){
-				sb.append(m_simulator.getPresetIndex(tskTask.rec_preset)).append(",");
-			}
+		sb.append("task_delay_"+vNameIndex+"=[");
+		for (int i=0; i < loglist.size(); i++){
+			Task tskTask = loglist.get(i);
+			assert(tskTask.taskID == i);
+			sb.append(tskTask.rec_outTS - tskTask.rec_inTS).append(",");
 		}
 		sb.append("];");
 		return sb.toString();
-	}
-
-	public void updateArrivalEvent(Task task) {
-		lastSlotLogObj.arriveNumber ++;
 	}
 	
-	public void updateOutEvent(Task taskBeingServed) {
-		// TODO Auto-generated method stub
-		lastSlotLogObj.serverdNumber++;
+	private LinkedList<Task> getTasklog(String vNameBase) {
+		LinkedList<Task> loglist = new LinkedList<Task>();
+		
+		for (Task task : tasklog) {
+			if (task.videoName.equals(vNameBase)) {
+				int i=0;
+				while(i < loglist.size() && task.taskID > loglist.get(i).taskID){
+					i++;
+				}
+				loglist.add(i, task);
+			}
+		}
+		
+		return loglist;
+	}
+	
+
+	private String getTaskPresetTrace(int vNameIndex) {
+		LinkedList<Task> loglist = getTasklog(m_simulator.videoBaseNameStrings[vNameIndex]);
+		
+		StringBuffer sb = new StringBuffer();
+		sb.append("task_preset_"+vNameIndex+"=[");
+		for (int i=0; i < loglist.size(); i++){
+			Task tskTask = loglist.get(i);
+			assert(tskTask.taskID == i);
+			sb.append(m_simulator.getPresetIndex(tskTask.rec_preset)).append(",");
+		}
+		sb.append("];");
+		return sb.toString();
 	}
 
-	public void updateEmitEvent(long m_serverID, Task task) {
-		// TODO Auto-generated method stub
-		lastSlotLogObj.emittedNumber++;
+	public String getTskAvgDelayArray(){
+		StringBuffer sb = new StringBuffer();
+		sb.append("[");
+		for (String videoName : m_simulator.videoBaseNameStrings) {
+			sb.append(getTskAvgDelay(videoName)).append(",");	
+		}
+		sb.append("]");
+		return sb.toString();
+	}
+	
+	public double getTskAvgDelay(String videoName){
+		double avg=0.0;
+		int number=0;
+		for (Task task : tasklog) {
+			if (task.videoName.equals(videoName)) {
+				avg += task.rec_outTS - task.rec_inTS;
+				number++;
+			}
+		}
+		avg = (number>0) ? (avg/number) : 0;
+		return avg;
+	}
+	
+	public String getTskAvgQualityArray(){
+		StringBuffer sb = new StringBuffer();
+		sb.append("[");
+		for (String videoName : m_simulator.videoBaseNameStrings) {
+			sb.append(getTskAvgQuality(videoName)).append(",");	
+		}
+		sb.append("]");
+		return sb.toString();
+	}
+	
+	public double getTskAvgQuality(String videoName){
+		double avg=0.0;
+		int number=0;
+		for (Task task : tasklog) {
+			if (task.videoName.equals(videoName)) {
+				CodingSet cSet = task.getCodingResult(task.rec_preset);
+				avg += cSet.outputBitR;
+				number++;
+			}
+		}
+		avg = (number>0) ? (avg/number) : 0;
+		return avg;
 	}
 
 	public void init() {
@@ -208,8 +260,105 @@ public class Recorder extends Event{
 		
 	}
 
+	public void outputRecord(String outFile, double lastTS) {
+		try {
+			PrintWriter pw = new PrintWriter(
+					new OutputStreamWriter(new FileOutputStream(outFile)), true);
+						
+			// print delay trace for each video stream
+			for (int i = 0; i < m_simulator.videoBaseNameStrings.length; i++) {
+				pw.println(getTaskDelayTrace(i));
+			}
+			
+			// print preset configuration for each video stream
+			for (int i = 0; i < m_simulator.videoBaseNameStrings.length; i++) {
+				pw.println(getTaskPresetTrace(i));
+			}
+			
+			// print time slot--queue length trace
+			for (int i = 0; i < m_simulator.m_cluster.m_serverVector.size(); i++) {
+				pw.println(getSlotQLenTrace(i));
+			}
+						
+			//close the file
+			pw.close();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+//	public void outputRecord_AVG(String outFile, double lastTS2) {
+//		try {
+//			PrintWriter pw = new PrintWriter(
+//					new OutputStreamWriter(new FileOutputStream(outFile)), true);
+//			
+//			// print avg delay for each video stream
+//			for (int i = 0; i < m_simulator.videoBaseNameStrings.length; i++) {
+//				pw.println(getTaskAvgDelaySingleString(i));
+//			}
+//			
+//			// print avg quality for each video stream
+//			for (int i = 0; i < m_simulator.videoBaseNameStrings.length; i++) {
+//				pw.println(getTaskAvgQualitySingleString(i));
+//			}
+//			
+//			// print time average--queue length result
+//			pw.println(getAvgQlenSingelString());
+////			pw.println(getAvgQlenArrayString());
+//			
+//			// print time average--queue backlog result
+//			pw.println(getAvgQBacklogSingelString());
+////			pw.println(getAvgQBacklogArrayString());
+//			
+//			//close the file
+//			pw.close();
+//		} catch (Exception e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//	}
+
 	public void removeAllData() {
 		tasklog.clear();
 		slotLogList.clear();
+	}
+
+	public void updateArrivalEvent(Task task) {
+		lastSlotLogObj.arriveNumber ++;
+	}
+
+	public void updateEmitEvent(long m_serverID, Task task) {
+		// TODO Auto-generated method stub
+		lastSlotLogObj.emittedNumber++;
+	}
+
+	public void updateOutEvent(Task taskBeingServed) {
+		// TODO Auto-generated method stub
+		lastSlotLogObj.serverdNumber++;
+	}
+
+
+}
+
+class SlotLog {
+	long arriveNumber;
+	long emittedNumber;
+	int parallel;
+	double[] QbacklogVector;
+	int[] QlenVector;
+	long serverdNumber;
+	double time_interval;
+	double time_low;
+
+	
+	public SlotLog(double time_low, double time_interval){
+		this.time_low = time_low;
+		this.time_interval = time_interval;
+		
+		this.arriveNumber = 0;
+		this.serverdNumber = 0;
+		this.emittedNumber = 0;
+		this.parallel = 0;
 	}
 }

@@ -61,7 +61,10 @@ public class Server extends Event {
         TaskBeingServed = task;
         TaskBeingServed.rec_svrID = this.m_serverID;
         TaskBeingServed.rec_serveTS = ((Simulator)simulator).now();
-        TaskBeingServed.rec_currentQlen = m_taskQueue.size(); 
+        TaskBeingServed.rec_currentQlen = m_taskQueue.size()+1; 
+
+        // try schedule
+        TaskBeingServed.rec_preset = m_cm.m_schedulor.SchedulePreset(this, TaskBeingServed);
 
         //update the log
         //m_simulator.m_recorder.updateEmitEvent(this.m_serverID, task);
@@ -72,23 +75,29 @@ public class Server extends Event {
         if (cset != null){
         	codingTime = cset.codingTime;
         }else {
-			System.err.println("preset "+task.rec_preset+" cannot find in the trace");
+			System.err.println("preset "+TaskBeingServed.rec_preset+" cannot find in the trace");
 		}
         
-        time = m_simulator.now() + codingTime/m_speedScale;
+        time = m_simulator.now() + CPUCodingTime(codingTime);
         simulator.insert(this);
+        
+//        System.out.println("serve: "+TaskBeingServed.getContent());
     }
 
-	public double getResidualTime() {
+	private double CPUCodingTime(double codingTime) {
+		return codingTime/m_speedScale;
+	}
+
+	public double getResidualBacklogTime() {
 		double residual_time=0;
 		// get the residual time of finish
 		if (TaskBeingServed!=null) {
 			CodingSet cSet = TaskBeingServed.getCodingResult(TaskBeingServed.rec_preset);
 			double codingTime = cSet.codingTime;
-			residual_time += codingTime - (m_simulator.now() - TaskBeingServed.rec_serveTS);
+			residual_time += CPUCodingTime(codingTime) - (m_simulator.now() - TaskBeingServed.rec_serveTS);
 		}
 		// accumulate all queuing task workload time(default preset)
-		residual_time += m_taskQueue.getQueueWorkload();
+		residual_time += CPUCodingTime(m_taskQueue.getQueueWorkload());
 		
 		return residual_time;
 	}
