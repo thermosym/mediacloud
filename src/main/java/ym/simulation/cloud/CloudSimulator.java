@@ -40,19 +40,23 @@ public class CloudSimulator extends Simulator {
 
 
 	void start() {
-		routine_show_avg_preset_static();
-//		routine_show_singel_preset_static();
+//		routine_show_avg_preset_static();
+		routine_show_singel_static();
 	}
-	void routine_show_singel_preset_static(){
+
+	void routine_show_singel_static(){
 		double lastTS = 600.0;
-		String psetStrings[] = {"faster"}; // default preset, static scheduling use
+		String pset = "faster";
 		double v=10;
-		for (int i=0; i<psetStrings.length;i++){
-			String pset = psetStrings[i];
-			routine_multiQ_v (v, lastTS, pset, 2, 1); // do simulation
-			m_recorder.outputRecord("result_singtel_static.m", lastTS);
-			cleaning();
-		}
+		int numServer=2;
+		double scale=1;
+		
+		routine_multiQ_v (v, lastTS, pset, numServer, scale); // do simulation
+		
+		m_recorder.outputRecord("result_single_static_"+pset+".m", lastTS);
+		
+		
+		cleaning();
 	}
 
 	void routine_show_avg_preset_static(){

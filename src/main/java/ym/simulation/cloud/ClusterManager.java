@@ -77,11 +77,12 @@ public class ClusterManager {
 	private Server findShortServer() {
 		// find the shortest queue
 		Server minSvr=null;
-		double backlog=Double.MAX_VALUE;
+		double backlog = Double.MAX_VALUE;
 		
 		for (Server svr : m_serverVector) {
-			if (svr.m_taskQueue.size() < backlog) {
-				backlog = svr.m_taskQueue.size();
+			double temp_backlog = svr.m_taskQueue.size() + (svr.isAvailable()?0:1); 
+			if (temp_backlog < backlog) {
+				backlog = temp_backlog;
 				minSvr = svr;
 			}
 		}

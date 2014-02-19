@@ -90,7 +90,7 @@ public class Recorder extends Event{
 		return sb.toString();
 	}
 	
-	private String getAvgQBacklogSingelString(){
+	private String getAvgQBacklogSingleString(){
 		double avg=0;
 		StringBuffer sb = new StringBuffer();
 		sb.append("avg_QBacklog=");
@@ -123,7 +123,7 @@ public class Recorder extends Event{
 		return sb.toString();
 	}
 
-	private String getAvgQlenSingelString(){
+	private String getAvgQlenSingleString(){
 		double avg=0;
 		StringBuffer sb = new StringBuffer();
 		sb.append("avg_Qlen=");
@@ -135,12 +135,56 @@ public class Recorder extends Event{
 		return sb.toString();		
 	}
 	
+	private String getSlotQBacklogTrace(int queueIndex) {
+		StringBuffer sb = new StringBuffer();
+		sb.append("slot_QBacklog_"+queueIndex+"=[");
+		for (SlotLog log: slotLogList){
+			if ( log.time_low+log.time_interval <= lastTS){
+				sb.append(log.QbacklogVector[queueIndex]).append(",");
+			}
+		}
+		sb.append("];");
+		return sb.toString();
+	}
+	
 	private String getSlotQLenTrace(int queueIndex) {
 		StringBuffer sb = new StringBuffer();
 		sb.append("slot_Qlen_"+queueIndex+"=[");
 		for (SlotLog log: slotLogList){
 			if ( log.time_low+log.time_interval <= lastTS){
 				sb.append(log.QlenVector[queueIndex]).append(",");
+			}
+		}
+		sb.append("];");
+		return sb.toString();
+	}
+
+	private String getSlotQBacklogAllTrace() {
+		StringBuffer sb = new StringBuffer();
+		sb.append("slot_QBacklogAll=[");
+		for (SlotLog log: slotLogList){
+			if ( log.time_low+log.time_interval <= lastTS){
+				sb.append("[");
+				for (int i = 0; i < log.QbacklogVector.length; i++) {
+					sb.append(log.QbacklogVector[i]).append(",");	
+				}
+				sb.append("];");
+			}
+		}
+		sb.append("];");
+		return sb.toString();
+	}
+	
+	private String getSlotQLenAllTrace() {
+		StringBuffer sb = new StringBuffer();
+		sb.append("slot_QlenAll=[");
+		for (SlotLog log: slotLogList){
+			if ( log.time_low+log.time_interval <= lastTS){
+				sb.append("[");
+				for (int i = 0; i < log.QlenVector.length; i++) {
+					sb.append(log.QlenVector[i]).append(",");	
+				}
+				sb.append("];");
 			}
 		}
 		sb.append("];");
@@ -177,6 +221,22 @@ public class Recorder extends Event{
 		return sb.toString();
 	}
 	
+	
+	private String getTaskQualityTrace(int vNameIndex) {
+		LinkedList<Task> loglist = getTasklog(m_simulator.videoBaseNameStrings[vNameIndex]);
+		
+		StringBuffer sb = new StringBuffer();
+		sb.append("task_quality_"+vNameIndex+"=[");
+		for (int i=0; i < loglist.size(); i++){
+			Task tskTask = loglist.get(i);
+			assert(tskTask.taskID == i);
+			CodingSet cset = tskTask.getCodingResult(tskTask.rec_preset);
+			sb.append(cset.outputBitR).append(",");
+		}
+		sb.append("];");
+		return sb.toString();
+	}
+	
 	private LinkedList<Task> getTasklog(String vNameBase) {
 		LinkedList<Task> loglist = new LinkedList<Task>();
 		
@@ -208,16 +268,6 @@ public class Recorder extends Event{
 		return sb.toString();
 	}
 
-	public String getTskAvgDelayArray(){
-		StringBuffer sb = new StringBuffer();
-		sb.append("[");
-		for (String videoName : m_simulator.videoBaseNameStrings) {
-			sb.append(getTskAvgDelay(videoName)).append(",");	
-		}
-		sb.append("]");
-		return sb.toString();
-	}
-	
 	public double getTskAvgDelay(String videoName){
 		double avg=0.0;
 		int number=0;
@@ -231,11 +281,11 @@ public class Recorder extends Event{
 		return avg;
 	}
 	
-	public String getTskAvgQualityArray(){
+	public String getTskAvgDelayArray(){
 		StringBuffer sb = new StringBuffer();
 		sb.append("[");
 		for (String videoName : m_simulator.videoBaseNameStrings) {
-			sb.append(getTskAvgQuality(videoName)).append(",");	
+			sb.append(getTskAvgDelay(videoName)).append(",");	
 		}
 		sb.append("]");
 		return sb.toString();
@@ -254,6 +304,16 @@ public class Recorder extends Event{
 		avg = (number>0) ? (avg/number) : 0;
 		return avg;
 	}
+	
+	public String getTskAvgQualityArray(){
+		StringBuffer sb = new StringBuffer();
+		sb.append("[");
+		for (String videoName : m_simulator.videoBaseNameStrings) {
+			sb.append(getTskAvgQuality(videoName)).append(",");	
+		}
+		sb.append("]");
+		return sb.toString();
+	}
 
 	public void init() {
 		
@@ -269,17 +329,40 @@ public class Recorder extends Event{
 			for (int i = 0; i < m_simulator.videoBaseNameStrings.length; i++) {
 				pw.println(getTaskDelayTrace(i));
 			}
+
+			// print quality trace for each video stream
+			for (int i = 0; i < m_simulator.videoBaseNameStrings.length; i++) {
+				pw.println(getTaskQualityTrace(i));
+			}
 			
 			// print preset configuration for each video stream
 			for (int i = 0; i < m_simulator.videoBaseNameStrings.length; i++) {
 				pw.println(getTaskPresetTrace(i));
 			}
 			
-			// print time slot--queue length trace
-			for (int i = 0; i < m_simulator.m_cluster.m_serverVector.size(); i++) {
-				pw.println(getSlotQLenTrace(i));
+			// print all presets
+			StringBuffer sb = new StringBuffer().append("all_presets=[");
+			for (int i = 0; i < m_simulator.all_presets.length; i++) {
+				sb.append("\'").append(m_simulator.all_presets[i]).append("\',");
 			}
-						
+			sb.append("];");
+			pw.println(sb.toString());
+			
+//			// print time slot--queue length trace
+//			for (int i = 0; i < m_simulator.m_cluster.m_serverVector.size(); i++) {
+//				pw.println(getSlotQLenTrace(i));
+//			}
+//
+//			// print time slot--queue backlog trace
+//			for (int i = 0; i < m_simulator.m_cluster.m_serverVector.size(); i++) {
+//				pw.println(getSlotQLenTrace(i));
+//			}
+
+			pw.println(getSlotQLenAllTrace());
+			
+			pw.println(getSlotQBacklogAllTrace());
+			
+			
 			//close the file
 			pw.close();
 		} catch (Exception e) {
