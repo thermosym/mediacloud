@@ -59,6 +59,22 @@ class LyapunovSchedulor extends Schedulor{
 	}
 	
 	public String SchedulePreset(Server svr, Task tsk){
+		// min-drift_penalty = V*D-Q*C
+		double F_min = Double.MAX_VALUE;
+		int min_index =- 1;
+		double cT_default = tsk.getCodingResult(m_preset_default).codingTime;
+		
+		for (int i = 0; i < tsk.codingSets.size(); i++) {
+			CodingSet cSet = tsk.codingSets.get(i);
+			double cT = svr.CPUCodingTime(cSet.codingTime);
+			double D = cSet.outputBitR / 1000.0;
+			double F_temp = V*D - svr.getResidualBacklogTime()*(cT_default/cT);
+			if (F_temp < F_min) {
+				F_min = F_temp;
+				min_index = i;
+			}
+		}
+		return tsk.codingSets.get(min_index).preset;
 //    	// update the lyapunov virtual queue, even no schedule
 //    	vqueue_Z = svr.getResidualTime();
 //		
@@ -114,6 +130,5 @@ class LyapunovSchedulor extends Schedulor{
 //			System.out.println();
 //		}
 //
-		return m_preset_default;
     }
 }

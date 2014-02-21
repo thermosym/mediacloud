@@ -84,7 +84,7 @@ public class Server extends Event {
 //        System.out.println("serve: "+TaskBeingServed.getContent());
     }
 
-	private double CPUCodingTime(double codingTime) {
+	public double CPUCodingTime(double codingTime) {
 		return codingTime/m_speedScale;
 	}
 

@@ -22,10 +22,14 @@ public class CloudSimulator extends Simulator {
 //    private String all_presets[]={"ultrafast", "superfast", "veryfast", "faster", "fast", 
 //			"medium", "slow", "slower", "veryslow" };
 	public String all_presets[]={"superfast", "faster", "slow", "slower"};
+//	public String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_","sintel_trans_trace_"};
 	public String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_"};
-//	public String[] videoBaseNameStrings= {"bbb_trans_trace_"};
     
-
+//	boolean opt = false; // mark static
+	boolean opt = true; // mark lyapunov
+//	String prefixString = "lya_";
+	String prefixString;
+	
 	public static void main(String[] args) {
 //		try {
 //			PrintStream ps = new PrintStream(new BufferedOutputStream(new FileOutputStream("stdout.txt")),true);
@@ -40,43 +44,61 @@ public class CloudSimulator extends Simulator {
 
 
 	void start() {
-//		routine_show_avg_preset_static();
+		if (opt) {
+			prefixString = "lya_";
+		}else{
+			prefixString = "sta_";
+		}
+		
 		routine_show_singel_static();
+		
+//		if (opt) {
+//			routine_show_avg_v_lyap();
+//		}else{
+//			routine_show_avg_preset_static();
+//		}
 	}
 
 	void routine_show_singel_static(){
 		double lastTS = 600.0;
-		String pset = "faster";
-		double v=10;
+		String pset = "slow";
+		double v=100;
 		int numServer=2;
 		double scale=1;
 		
 		routine_multiQ_v (v, lastTS, pset, numServer, scale); // do simulation
-		
-		m_recorder.outputRecord("result_single_static_"+pset+".m", lastTS);
+		String outFileNameString;
+		if (opt) {
+			outFileNameString = videoBaseNameStrings[0]+"result_single_lyap_"+pset+".m";	
+		} else {
+			outFileNameString = videoBaseNameStrings[0]+"result_single_static_"+pset+".m";
+		}
+
+		m_recorder.outputRecord(outFileNameString, lastTS);
 		
 		
 		cleaning();
 	}
 
 	void routine_show_avg_preset_static(){
+		prefixString = "sta_";
 		double lastTS = 600.0;
 		String psetStrings[] = all_presets;//{"faster"}; // default preset, static scheduling use
-		double v=10;
+		double v=5;
 		
 		StringBuffer sb_delay = new StringBuffer();
 		StringBuffer sb_quality = new StringBuffer();
 		StringBuffer sb_qlen = new StringBuffer();
 		StringBuffer sb_qbacklog = new StringBuffer();
 		
-		sb_delay.append("avg_delay_preset=[");
-		sb_quality.append("avg_quality_preset=[");
-		sb_qlen.append("avg_qlen_preset=[");
-		sb_qbacklog.append("avg_qbacklog_preset=[");
+		sb_delay.append(prefixString).append("avg_delay=[");
+		sb_quality.append(prefixString).append("avg_quality=[");
+		sb_qlen.append(prefixString).append("avg_qlen=[");
+		sb_qbacklog.append(prefixString).append("avg_qbacklog=[");
 		
 		for (int i=0; i<psetStrings.length;i++){
 			String pset = psetStrings[i];
-			routine_multiQ_v (v, lastTS, pset, 4, 1);
+			routine_multiQ_v (v, lastTS, pset, 2, 1);
 			
 			sb_delay.append(m_recorder.getTskAvgDelayArray()).append(";");
 			sb_quality.append(m_recorder.getTskAvgQualityArray()).append(";");
@@ -91,12 +113,64 @@ public class CloudSimulator extends Simulator {
 		sb_qbacklog.append("];");
 		
 		try {
+			String outFileNameString = "result_avg_static.m";
 			PrintWriter pw = new PrintWriter(
-					new OutputStreamWriter(new FileOutputStream("result_avg_static.m")), true);
+					new OutputStreamWriter(new FileOutputStream(outFileNameString)), true);
 			pw.println(sb_delay.toString());
 			pw.println(sb_quality.toString());
 			pw.println(sb_qlen.toString());
 			pw.println(sb_qbacklog.toString());
+			pw.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+	
+	void routine_show_avg_v_lyap(){
+		prefixString = "lya_";
+		String pset = "faster"; // default set
+		
+		double lastTS = 600.0;
+		int min_v = 1, max_v = 100;
+		
+		StringBuffer sb_delay = new StringBuffer();
+		StringBuffer sb_quality = new StringBuffer();
+		StringBuffer sb_qlen = new StringBuffer();
+		StringBuffer sb_qbacklog = new StringBuffer();
+		StringBuffer sb_vIndex = new StringBuffer();
+		
+		sb_delay.append(prefixString).append("avg_delay=[");
+		sb_quality.append(prefixString).append("avg_quality=[");
+		sb_qlen.append(prefixString).append("avg_qlen=[");
+		sb_qbacklog.append(prefixString).append("avg_qbacklog=[");
+		sb_vIndex.append(prefixString).append("v=[");
+		
+		for (int v=min_v; v<=max_v; v++){
+			routine_multiQ_v (v, lastTS, pset, 6, 1);
+			sb_vIndex.append(v).append(",");
+			sb_delay.append(m_recorder.getTskAvgDelayArray()).append(";");
+			sb_quality.append(m_recorder.getTskAvgQualityArray()).append(";");
+			sb_qlen.append(m_recorder.getAvgQlenArrayString()).append(";");
+			sb_qbacklog.append(m_recorder.getAvgQBacklogArrayString()).append(";");
+			cleaning();
+		}
+		
+		sb_delay.append("];");
+		sb_quality.append("];");
+		sb_qlen.append("];");
+		sb_qbacklog.append("];");
+		sb_vIndex.append("];");
+		
+		try {
+			String outFileNameString = "result_avg_lyap.m";	
+			PrintWriter pw = new PrintWriter(
+					new OutputStreamWriter(new FileOutputStream(outFileNameString)), true);
+			pw.println(sb_delay.toString());
+			pw.println(sb_quality.toString());
+			pw.println(sb_qlen.toString());
+			pw.println(sb_qbacklog.toString());
+			pw.println(sb_vIndex.toString());
 			pw.close();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -114,8 +188,12 @@ public class CloudSimulator extends Simulator {
 		// manage all servers
 		m_cluster = new ClusterManager(serverNum, this, speedScale); 
 
-		m_cluster.m_schedulor = new BaseSchedulor(this);
-//		m_cluster.m_schedulor = new LyapunovSchedulor(this);
+		if (opt) {
+			m_cluster.m_schedulor = new LyapunovSchedulor(this);	
+		} else {
+			m_cluster.m_schedulor = new BaseSchedulor(this);
+		}
+		
 
 		// set parameters; default preset, V 
 		m_cluster.m_schedulor.setPreset_default(pset);

@@ -15,8 +15,8 @@ public class Recorder extends Event{
 	double lastTS;
 	CloudSimulator m_simulator;
 	double slot_interval;
+	String prefix;
 	
-
 	ArrayList<SlotLog> slotLogList = new ArrayList<SlotLog>();
 	ArrayList<Task> tasklog = new ArrayList<Task>();
 	
@@ -25,6 +25,7 @@ public class Recorder extends Event{
 		this.lastTS = lastTS;
 		this.m_simulator = sim;
 		this.slot_interval = slot_interval;
+		this.prefix = m_simulator.prefixString;
 	}
 	public void addLog(Task tsk){
 		tasklog.add(tsk);
@@ -161,7 +162,7 @@ public class Recorder extends Event{
 
 	private String getSlotQBacklogAllTrace() {
 		StringBuffer sb = new StringBuffer();
-		sb.append("slot_QBacklogAll=[");
+		sb.append(prefix).append("slot_QBacklogAll=[");
 		for (SlotLog log: slotLogList){
 			if ( log.time_low+log.time_interval <= lastTS){
 				sb.append("[");
@@ -177,7 +178,7 @@ public class Recorder extends Event{
 	
 	private String getSlotQLenAllTrace() {
 		StringBuffer sb = new StringBuffer();
-		sb.append("slot_QlenAll=[");
+		sb.append(prefix).append("slot_QlenAll=[");
 		for (SlotLog log: slotLogList){
 			if ( log.time_low+log.time_interval <= lastTS){
 				sb.append("[");
@@ -211,7 +212,7 @@ public class Recorder extends Event{
 		LinkedList<Task> loglist = getTasklog(m_simulator.videoBaseNameStrings[vNameIndex]);
 		
 		StringBuffer sb = new StringBuffer();
-		sb.append("task_delay_"+vNameIndex+"=[");
+		sb.append(prefix).append("task_delay_"+vNameIndex+"=[");
 		for (int i=0; i < loglist.size(); i++){
 			Task tskTask = loglist.get(i);
 			assert(tskTask.taskID == i);
@@ -226,7 +227,7 @@ public class Recorder extends Event{
 		LinkedList<Task> loglist = getTasklog(m_simulator.videoBaseNameStrings[vNameIndex]);
 		
 		StringBuffer sb = new StringBuffer();
-		sb.append("task_quality_"+vNameIndex+"=[");
+		sb.append(prefix).append("task_quality_"+vNameIndex+"=[");
 		for (int i=0; i < loglist.size(); i++){
 			Task tskTask = loglist.get(i);
 			assert(tskTask.taskID == i);
@@ -258,7 +259,7 @@ public class Recorder extends Event{
 		LinkedList<Task> loglist = getTasklog(m_simulator.videoBaseNameStrings[vNameIndex]);
 		
 		StringBuffer sb = new StringBuffer();
-		sb.append("task_preset_"+vNameIndex+"=[");
+		sb.append(prefix).append("task_preset_"+vNameIndex+"=[");
 		for (int i=0; i < loglist.size(); i++){
 			Task tskTask = loglist.get(i);
 			assert(tskTask.taskID == i);
@@ -341,7 +342,7 @@ public class Recorder extends Event{
 			}
 			
 			// print all presets
-			StringBuffer sb = new StringBuffer().append("all_presets=[");
+			StringBuffer sb = new StringBuffer().append(prefix).append("all_presets=[");
 			for (int i = 0; i < m_simulator.all_presets.length; i++) {
 				sb.append("\'").append(m_simulator.all_presets[i]).append("\',");
 			}
