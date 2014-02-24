@@ -11,7 +11,7 @@ class CodingSet{
 
 public class Task {
 	String videoName;
-	int queueIndex;
+//	int queueIndex;
 	double origBitR;	
 	long userID;
 	long taskID;
@@ -33,7 +33,7 @@ public class Task {
 	public Task(Task task){
 		
 		this.videoName = task.videoName;
-		this.queueIndex = task.queueIndex;
+//		this.queueIndex = task.queueIndex;
 		this.origBitR = task.origBitR;
 		this.userID = task.userID;
 		this.taskID = task.taskID;

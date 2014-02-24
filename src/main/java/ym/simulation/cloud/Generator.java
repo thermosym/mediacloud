@@ -11,23 +11,23 @@ import java.util.ArrayList;
 * Generate a stream of Tasks for 8.0 time units.
 */
 public class Generator extends Event {
-    Queue queue;
-    int queueIndex;
-    long m_taskIndex;
+    long m_videoIndex;
     double lastTS;
     double avg_interval;
+    ClusterManager m_cm;
     
     private ArrayList<Task> traceList;
     private int lastArriveIndex;
+    
+    public String m_videoName;
     public String presets[];
     // ={"ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow" };
 
-    public Generator(int queueIndex, double lastTS, double avg_interval, String pset[]){
-    	this.queueIndex = queueIndex;
+    public Generator(int videoIndex, double lastTS, double avg_interval, String pset[]){
     	this.lastTS = lastTS;
     	this.avg_interval = avg_interval;
     	this.presets = pset;
-    	m_taskIndex = 0;
+    	m_videoIndex = videoIndex;
     	traceList = new ArrayList<Task>();
     	lastArriveIndex = 0;
     }
@@ -39,16 +39,18 @@ public class Generator extends Event {
     	Task task = getOneVideo();
     	if (task != null){
         	task.rec_inTS = ((Simulator)simulator).now();
-        	task.queueIndex = this.queueIndex;
-        	task.rec_preset = "fast"; //TODO: will be set on fly, here is useless 
-            queue.insert(simulator, task); // insert the task to queue and schedule it
-            
+
+        	task.rec_preset = m_cm.m_schedulor.m_preset_default; 
+            m_cm.insertTask(task); // insert the task to queue and schedule it
+
 //            String contentString = task.getContent(); 
 //            System.out.println(contentString);
             
             time += avg_interval; //MyRandom.exponential(avg_interval)
-            //time += avg_interval;
-            if (time < lastTS) simulator.insert(this);    		
+
+            if (time < lastTS) { // next
+            	simulator.insert(this);    		
+            }
     	}
     }
     
@@ -71,6 +73,7 @@ public class Generator extends Event {
 	}
     
 	public void parseTraceTXT(String videoName) {
+		m_videoName = videoName;
 		
 		for (String pset : presets) {
 			// reading data from txt file
@@ -90,23 +93,23 @@ public class Generator extends Event {
 			//for each video segment
 			for (int i = 0; i < enT_String.length; i++) {
 
-				String vName = videoName+i;
+				String vName = videoName;
 				double origBitR = 0;
 				double enT = Double.parseDouble(enT_String[i]);
 				double bitR = Double.parseDouble(bitR_String[i]); 
-				updateTaskTrace(pset,vName,origBitR,enT,bitR);
+				updateTaskTrace(pset,vName,i,origBitR,enT,bitR);
 			}
 
 		}
 		
 	}
 
-	private void updateTaskTrace(String pset, String vName, double origBitR,
+	private void updateTaskTrace(String pset, String vName, int taskID, double origBitR,
 			double enT, double enbitR) {
 		Task tskTask=null;
 		
 		for (int i = 0; i < traceList.size(); i++) {
-			if (traceList.get(i).videoName.equals(vName)){
+			if (traceList.get(i).videoName.equals(vName) && traceList.get(i).taskID == taskID){
 				//find this video
 				tskTask = traceList.get(i); 
 				break;
@@ -124,6 +127,7 @@ public class Generator extends Event {
 			//create this video
 			tskTask = new Task();
 			tskTask.videoName = vName;
+			tskTask.taskID = taskID;
 			tskTask.origBitR = origBitR;
 			tskTask.codingSets = new ArrayList<CodingSet>();
 			

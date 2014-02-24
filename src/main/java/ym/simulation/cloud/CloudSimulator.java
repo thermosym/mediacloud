@@ -3,23 +3,16 @@ package ym.simulation.cloud;
 import java.io.BufferedOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.Vector;
 
 
 
-class LyapunovSolver{
-	int para_V=0;
-	double lyapFunc_Z=0;
-	double lyapFunc_Q=0;
-	double threshold_drift=0;
-	double vqueue_Z = 0;
-}
+
 
 public class CloudSimulator extends Simulator {
-	
-//	boolean onlySlotSchedule=true;
-	Vector<Queue> m_queueVector;
 	
 //	Vector<Server> m_serverVector;
 	Recorder m_recorder;
@@ -28,101 +21,197 @@ public class CloudSimulator extends Simulator {
 	
 //    private String all_presets[]={"ultrafast", "superfast", "veryfast", "faster", "fast", 
 //			"medium", "slow", "slower", "veryslow" };
-	private String all_presets[]={"superfast", "faster", "slow", "slower"};
-	
-    private int last_preset_index=6;
+	public String all_presets[]={"superfast", "faster", "slow", "slower"};
+//	public String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_","sintel_trans_trace_"};
+	public String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_"};
     
-	private double threshold_VQ_q=2;
-	
-	LyapunovSolver m_lyaSolver;
+//	boolean opt = false; // mark static
+	boolean opt = true; // mark lyapunov
+//	String prefixString = "lya_";
+	String prefixString;
 	
 	public static void main(String[] args) {
-		try {
-			PrintStream ps = new PrintStream(new BufferedOutputStream(new FileOutputStream("stdout.txt")),true);
-			System.setOut(ps);
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		try {
+//			PrintStream ps = new PrintStream(new BufferedOutputStream(new FileOutputStream("stdout.txt")),true);
+//			System.setOut(ps);
+//		} catch (FileNotFoundException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		
 		new CloudSimulator().start();
 	}
 
 
 	void start() {
-		routine_show_avg_V();
-	}
-	
-	void routine_show_avg_V(){
-		int max_v = 1; // max_v value;
-		double lastTS = 600.0;
+		if (opt) {
+			prefixString = "lya_";
+		}else{
+			prefixString = "sta_";
+		}
 		
-//		for (int i=0; i<max_v; i++){
-//			routine_multiQ_v (i, lastTS);
-//
-//			double avg_qlen[] = new double[m_queuVector.size()];
-//			double avg_delay[] = new double[m_queuVector.size()];
-//
-//			for (int j = 0; j < m_queuVector.size(); j++) {
-//				avg_qlen[j] = m_recorder.getAvgQlen(j);
-//				avg_delay[j] = m_recorder.getTskAvgDelay(j);
-//				System.out.println("qlen="+avg_qlen[j]+"; delay="+avg_delay[j]);
-//			}
-//			
-//			m_recorder.outputRcord("result.m", lastTS);
+		routine_show_singel_static();
+		
+//		if (opt) {
+//			routine_show_avg_v_lyap();
+//		}else{
+//			routine_show_avg_preset_static();
 //		}
-		
-		String psetStrings[] = {"medium"}; //default preset
-		int v=10000;
-		for (String pset: psetStrings){
-			//run simulation
-			routine_multiQ_v (v, lastTS, pset, 1, 0.1);
-			
-			double avg_qlen[] = new double[m_queueVector.size()];
-			double avg_delay[] = new double[m_queueVector.size()];
+	}
 
-			for (int j = 0; j < m_queueVector.size(); j++) {
-				avg_qlen[j] = m_recorder.getAvgQlen(j);
-				avg_delay[j] = m_recorder.getTskAvgDelay(j);
-				System.out.println("qlen="+avg_qlen[j]+"; delay="+avg_delay[j]);
-			}
+	void routine_show_singel_static(){
+		double lastTS = 600.0;
+		String pset = "slow";
+		double v=100;
+		int numServer=2;
+		double scale=1;
+		
+		routine_multiQ_v (v, lastTS, pset, numServer, scale); // do simulation
+		String outFileNameString;
+		if (opt) {
+			outFileNameString = videoBaseNameStrings[0]+"result_single_lyap_"+pset+".m";	
+		} else {
+			outFileNameString = videoBaseNameStrings[0]+"result_single_static_"+pset+".m";
+		}
+
+		m_recorder.outputRecord(outFileNameString, lastTS);
+		
+		
+		cleaning();
+	}
+
+	void routine_show_avg_preset_static(){
+		prefixString = "sta_";
+		double lastTS = 600.0;
+		String psetStrings[] = all_presets;//{"faster"}; // default preset, static scheduling use
+		double v=5;
+		
+		StringBuffer sb_delay = new StringBuffer();
+		StringBuffer sb_quality = new StringBuffer();
+		StringBuffer sb_qlen = new StringBuffer();
+		StringBuffer sb_qbacklog = new StringBuffer();
+		
+		sb_delay.append(prefixString).append("avg_delay=[");
+		sb_quality.append(prefixString).append("avg_quality=[");
+		sb_qlen.append(prefixString).append("avg_qlen=[");
+		sb_qbacklog.append(prefixString).append("avg_qbacklog=[");
+		
+		for (int i=0; i<psetStrings.length;i++){
+			String pset = psetStrings[i];
+			routine_multiQ_v (v, lastTS, pset, 2, 1);
 			
-			m_recorder.outputRcord("result_static.m", lastTS);
+			sb_delay.append(m_recorder.getTskAvgDelayArray()).append(";");
+			sb_quality.append(m_recorder.getTskAvgQualityArray()).append(";");
+			sb_qlen.append(m_recorder.getAvgQlenArrayString()).append(";");
+			sb_qbacklog.append(m_recorder.getAvgQBacklogArrayString()).append(";");
 			cleaning();
 		}
+		
+		sb_delay.append("];");
+		sb_quality.append("];");
+		sb_qlen.append("];");
+		sb_qbacklog.append("];");
+		
+		try {
+			String outFileNameString = "result_avg_static.m";
+			PrintWriter pw = new PrintWriter(
+					new OutputStreamWriter(new FileOutputStream(outFileNameString)), true);
+			pw.println(sb_delay.toString());
+			pw.println(sb_quality.toString());
+			pw.println(sb_qlen.toString());
+			pw.println(sb_qbacklog.toString());
+			pw.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+	
+	void routine_show_avg_v_lyap(){
+		prefixString = "lya_";
+		String pset = "faster"; // default set
+		
+		double lastTS = 600.0;
+		int min_v = 1, max_v = 100;
+		
+		StringBuffer sb_delay = new StringBuffer();
+		StringBuffer sb_quality = new StringBuffer();
+		StringBuffer sb_qlen = new StringBuffer();
+		StringBuffer sb_qbacklog = new StringBuffer();
+		StringBuffer sb_vIndex = new StringBuffer();
+		
+		sb_delay.append(prefixString).append("avg_delay=[");
+		sb_quality.append(prefixString).append("avg_quality=[");
+		sb_qlen.append(prefixString).append("avg_qlen=[");
+		sb_qbacklog.append(prefixString).append("avg_qbacklog=[");
+		sb_vIndex.append(prefixString).append("v=[");
+		
+		for (int v=min_v; v<=max_v; v++){
+			routine_multiQ_v (v, lastTS, pset, 6, 1);
+			sb_vIndex.append(v).append(",");
+			sb_delay.append(m_recorder.getTskAvgDelayArray()).append(";");
+			sb_quality.append(m_recorder.getTskAvgQualityArray()).append(";");
+			sb_qlen.append(m_recorder.getAvgQlenArrayString()).append(";");
+			sb_qbacklog.append(m_recorder.getAvgQBacklogArrayString()).append(";");
+			cleaning();
+		}
+		
+		sb_delay.append("];");
+		sb_quality.append("];");
+		sb_qlen.append("];");
+		sb_qbacklog.append("];");
+		sb_vIndex.append("];");
+		
+		try {
+			String outFileNameString = "result_avg_lyap.m";	
+			PrintWriter pw = new PrintWriter(
+					new OutputStreamWriter(new FileOutputStream(outFileNameString)), true);
+			pw.println(sb_delay.toString());
+			pw.println(sb_quality.toString());
+			pw.println(sb_qlen.toString());
+			pw.println(sb_qbacklog.toString());
+			pw.println(sb_vIndex.toString());
+			pw.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 	}
 
-	private void routine_multiQ_v(int v, double lastTS, String pset, int serverNum, double speedScale){
-		m_lyaSolver = new LyapunovSolver();
-		m_lyaSolver.para_V = v;
-		last_preset_index = getPresetIndex(pset);
+	private void routine_multiQ_v(double v, double lastTS, String pset, int serverNum, double speedScale){
 		
 		double avg_interval = 5.0; // for arrival time 5s
 		double slot_interval = 0.1; // time slot interval
+		
 		events = new ListQueue(); // event queue
+		
+		// manage all servers
 		m_cluster = new ClusterManager(serverNum, this, speedScale); 
+
+		if (opt) {
+			m_cluster.m_schedulor = new LyapunovSchedulor(this);	
+		} else {
+			m_cluster.m_schedulor = new BaseSchedulor(this);
+		}
 		
-		m_queueVector = new Vector<Queue>();
+
+		// set parameters; default preset, V 
+		m_cluster.m_schedulor.setPreset_default(pset);
+		m_cluster.m_schedulor.setV(v);
+		
 		m_recorder = new Recorder(lastTS,this,slot_interval);  
-		
-//		String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_"};
-		String[] videoBaseNameStrings= {"bbb_trans_trace_"};
-		
-		
-		
+
 		for (int i=0; i<videoBaseNameStrings.length; i++) {
 			String videoName = videoBaseNameStrings[i];
-			Queue queue = new Queue(this); // video segment queue for the video stream
 			
 			// register record and queue			
 			Generator generator = new Generator(i, lastTS, avg_interval, all_presets);
 			
-			generator.queue = queue;
+			generator.m_cm = m_cluster;
+			generator.m_videoName = videoName;
 			generator.time = 0.0;
 			generator.parseTraceTXT(videoName);
 			insert(generator);
-			
-			m_queueVector.add(queue); // add it in queue vector
 		}
 		
 		
@@ -133,127 +222,8 @@ public class CloudSimulator extends Simulator {
 		doAllEvents();
 	}
 	
-	public void schedule(AbstractSimulator simulator) {
-		LyapunovSchedule(simulator);
-//		baseSchedule(simulator);
-		// maxQSchedule(simulator);
-	}
-
-    public void LyapunovSchedule(AbstractSimulator simulator){
-    	// update the lyapunov virtual queue, even no schedule
-    	m_lyaSolver.vqueue_Z = m_cluster.getResidualWorkTime();
-		
-		// drift
-		double D=0;
-		double base_drift = m_lyaSolver.para_V * D + m_lyaSolver.vqueue_Z*(0-m_cluster.getECtime()) ;
-		double min_drift = Double.MAX_VALUE;
-		int min_drift_i=0;
-		int min_drift_j=0;
-		double[][] func = new double[m_queueVector.size()][all_presets.length];
-		
-		for (int i = 0; i < m_queueVector.size(); i++) {
-			if (m_queueVector.get(i).size() > 0) {
-				// this queue has job
-				for (int j = 0; j < all_presets.length; j++) {
-					Task job = m_queueVector.get(i).getHead();
-					CodingSet codingSet = job.codingSets.get(j);
-					D = (codingSet.outputBitR - job.getMinBitrate())/job.getMinBitrate();
-					// the function of drift
-					double vd = m_lyaSolver.para_V *1* D/100.0;
-					double qsize = m_queueVector.get(i).size();
-					double zsize = m_lyaSolver.vqueue_Z;
-					double ct = codingSet.codingTime;
-//					double max_et = m_recorder.slot_interval * m_cluster.m_serverVector.size();
-					double max_et = m_cluster.getECtime();
-					func[i][j] = vd - qsize +zsize*(ct - max_et);  
-
-					if (func[i][j] < min_drift) {
-						min_drift = func[i][j]; 
-						min_drift_i = i;
-						min_drift_j = j;
-					}
-					
-					System.out.println("jq-"+i+"--set="+j+", D="+D+", q="+qsize+", z="+zsize+", ct="+ct+", et="+max_et);
-				}
-			}
-		}
-		
-		// find the optimal strategy and schedule it
-		Queue selectedQueue = m_queueVector.get(min_drift_i);
-		if (selectedQueue.size() > 0) {
-			Task tskTask = selectedQueue.remove();
-			tskTask.rec_preset = all_presets[min_drift_j];
-			m_cluster.serveTask(tskTask);
-			
-			// print the func
-			System.out.print("t="+now()+"|| preset="+min_drift_j +" || ");
-			for (double[] es : func) {
-				for (double e : es) {
-					System.out.print(e+",");
-				}
-			}
-			System.out.println();
-		}
-
-    }
-
-	public void baseSchedule(AbstractSimulator simulator) {
-
-		Server idleServer = m_cluster.getIdleServer();
-		// select a long queue length for dispatching
-
-		Queue maxQueue = null;
-		int maxQlen = 0;
-		// find the max Q
-		for (Queue que : m_queueVector) {
-			if ((que.size() > maxQlen)) {
-				maxQueue = que;
-				maxQlen = que.size();
-			}
-		}
-
-		if ((idleServer != null) && (maxQueue != null)) {
-			// schedule the selected job
-			Task tskTask = maxQueue.remove();
-
-//			tskTask.rec_preset = scheduleCodingPreset_baseAdaptive(tskTask);
-			tskTask.rec_preset = scheduleCodingPreset_baseStatic(tskTask);
-			idleServer.serveTask(simulator, tskTask);
-		}
-	}
-    
-    private String scheduleCodingPreset_lyapunov(Task tskTask) {
-		// TODO Auto-generated method stub
-		return all_presets[last_preset_index];
-	}
     
 	// always encode video with static preset
-    private String scheduleCodingPreset_baseStatic(Task tskTask) {
-		return all_presets[last_preset_index];
-	}
-
-
-	private String scheduleCodingPreset_baseAdaptive(Task tskTask) {
-    	String presetString = null;
-
-//    	CodingSet cSet = tskTask.codingSets.get(i);
-		Queue tskQueue = m_queueVector.get(tskTask.queueIndex);
-
-		if ( (tskQueue.size() > threshold_VQ_q) && (last_preset_index>0) ) {
-			last_preset_index--;
-		}else {
-			if (last_preset_index<8) {
-				last_preset_index++;	
-			}
-		}
-		
-		presetString = all_presets[last_preset_index];
-//		for (int i = tskTask.codingSets.size()-1; i >=0; i--) {
-//		}
-		return presetString;
-	}
-
-
 	/**
      * @return server which is idle. If no idle server, then return null.
      */
@@ -270,8 +240,6 @@ public class CloudSimulator extends Simulator {
     }
     
 	private void cleaning() {
-		// TODO Auto-generated method stub
-		m_queueVector.removeAllElements();
 		m_cluster.clean();
 		m_recorder.removeAllData();
 	}
