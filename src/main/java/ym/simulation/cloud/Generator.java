@@ -17,7 +17,7 @@ public class Generator extends Event {
     ClusterManager m_cm;
     
     private ArrayList<Task> traceList;
-    private int lastArriveIndex;
+    private int currentArriveIndex;
     
     public String m_videoName;
     public String presets[];
@@ -29,7 +29,7 @@ public class Generator extends Event {
     	this.presets = pset;
     	m_videoIndex = videoIndex;
     	traceList = new ArrayList<Task>();
-    	lastArriveIndex = 0;
+    	currentArriveIndex = 0;
     }
     /**
     * Create a new Task.  Add the Task to the queue  and
@@ -61,12 +61,13 @@ public class Generator extends Event {
 		}
 		
 		// loop select the video from the trace
-		if (lastArriveIndex >= traceList.size()-1 ) {
-//			lastArriveIndex = 0; // reach the end of list, go back again
-//			videoTask = traceList.get(lastArriveIndex);
+		if (currentArriveIndex >= traceList.size()-1 ) {
+			currentArriveIndex = 0; // reach the end of list, go back again
+			videoTask = traceList.get(currentArriveIndex);
+			currentArriveIndex++; // next video
 		} else {
-			videoTask = new Task(traceList.get(lastArriveIndex));
-			lastArriveIndex++; // next video
+			videoTask = new Task(traceList.get(currentArriveIndex));
+			currentArriveIndex++; // next video
 		}
 		
 		return videoTask;
