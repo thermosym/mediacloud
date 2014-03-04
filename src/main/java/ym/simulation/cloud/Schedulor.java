@@ -1,5 +1,7 @@
 package ym.simulation.cloud;
 
+import java.util.ArrayList;
+
 public class Schedulor {
 	protected CloudSimulator m_simulator;
 	protected String m_preset_default;
@@ -63,17 +65,22 @@ class LyapunovSchedulor extends Schedulor{
 		double F_min = Double.MAX_VALUE;
 		int min_index =- 1;
 		double cT_default = tsk.getCodingResult(m_preset_default).codingTime;
-		
+		double F_v[] = new double[ tsk.codingSets.size()];
 		for (int i = 0; i < tsk.codingSets.size(); i++) {
 			CodingSet cSet = tsk.codingSets.get(i);
 			double cT = svr.CPUCodingTime(cSet.codingTime);
 			double D = cSet.outputBitR / 1000.0;
-			double F_temp = V*D - svr.getResidualBacklogTime()*(cT_default/cT);
+			double F_temp = V*D - (svr.getResidualBacklogTime()/m_simulator.m_recorder.slot_interval)*(cT_default/cT);
+			F_v[i] = F_temp;
 			if (F_temp < F_min) {
 				F_min = F_temp;
 				min_index = i;
 			}
 		}
+//		System.out.printf("tsk=%d, min_index=%d, min_bitrate=%f, ",tsk.taskID,min_index,tsk.codingSets.get(min_index).outputBitR );
+//		System.out.println(getCodingbtrString(tsk.codingSets)+"  "+getFvalueString(F_v));
+		
+		
 		return tsk.codingSets.get(min_index).preset;
 //    	// update the lyapunov virtual queue, even no schedule
 //    	vqueue_Z = svr.getResidualTime();
@@ -131,4 +138,27 @@ class LyapunovSchedulor extends Schedulor{
 //		}
 //
     }
+
+	private String getFvalueString(double[] f_v) {
+		// TODO Auto-generated method stub
+		StringBuffer sb = new StringBuffer();
+		sb.append("FV=[");
+		for (int i = 0; i < f_v.length; i++) {
+			sb.append(f_v[i]).append(",");
+		}
+		sb.append("]");
+		return sb.toString();
+	}
+
+	private String getCodingbtrString(ArrayList<CodingSet> codingSets) {
+		// TODO Auto-generated method stub
+		StringBuffer sb = new StringBuffer();
+		sb.append("Br=[");
+		for (int i = 0; i < codingSets.size(); i++) {
+			CodingSet csSet = codingSets.get(i);
+			sb.append(csSet.outputBitR).append(", ");
+		}
+		sb.append("]");
+		return sb.toString();
+	}
 }
