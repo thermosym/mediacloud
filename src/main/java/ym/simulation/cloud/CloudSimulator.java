@@ -21,13 +21,14 @@ public class CloudSimulator extends Simulator {
 	
 //    private String all_presets[]={"ultrafast", "superfast", "veryfast", "faster", "fast", 
 //			"medium", "slow", "slower", "veryslow" };
-	public String all_presets[]={"superfast", "faster", "slow", "slower"};
+	public String all_presets[]={"superfast", "faster", "medium"};
 //	public String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_","sintel_trans_trace_"};
-//	public String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_"};
-	public String[] videoBaseNameStrings= {"bbb_trans_trace_"};
+	public String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_"};
+//	public String[] videoBaseNameStrings= {"bbb_trans_trace_"};
     
 //	boolean opt = false; // mark static
 	boolean opt = true; // mark lyapunov
+	double lastTS = 1;
 //	String prefixString = "lya_";
 	String prefixString;
 	double avg_interval; // for arrival time 5s
@@ -46,8 +47,8 @@ public class CloudSimulator extends Simulator {
 
 
 	void start() {
-		avg_interval =15;
-		
+		avg_interval =3;
+		lastTS = 10000.0;
 		if (opt) {
 			prefixString = "lya_";
 		}else{
@@ -65,8 +66,8 @@ public class CloudSimulator extends Simulator {
 	}
 
 	void routine_show_singel_static(){
-		double lastTS = 10000.0;
-		String pset = "faster";
+//		double lastTS = 10000.0;
+		String pset = "medium";
 		double v=1000;
 		int numServer=1;
 		double scale=1;
@@ -87,7 +88,7 @@ public class CloudSimulator extends Simulator {
 
 	void routine_show_avg_preset_static(){
 		prefixString = "sta_";
-		double lastTS = 10000.0;
+//		double lastTS = 10000.0;
 		String psetStrings[] = all_presets;//{"faster"}; // default preset, static scheduling use
 		double v=5;
 				
@@ -135,10 +136,10 @@ public class CloudSimulator extends Simulator {
 	
 	void routine_show_avg_v_lyap(){
 		prefixString = "lya_";
-		String pset = "slow"; // default set
+		String pset = "medium"; // default set
 		
-		double lastTS = 10000.0;
-		int min_v = 1, max_v = 1000;
+//		double lastTS = 10000.0;
+		int min_v = 0, max_v = 1000;
 		int inter_v = 10;
 		
 		StringBuffer sb_delay = new StringBuffer();
@@ -186,7 +187,7 @@ public class CloudSimulator extends Simulator {
 		
 	}
 
-	private void routine_multiQ_v(double v, double lastTS, String pset, int serverNum, double speedScale){
+	private void routine_multiQ_v(double v, double _lastTS, String pset, int serverNum, double speedScale){
 		
 		
 		double slot_interval = 0.1; // time slot interval
@@ -205,20 +206,21 @@ public class CloudSimulator extends Simulator {
 
 		// set parameters; default preset, V 
 		if (opt) {
-			m_cluster.m_schedulor.setPreset_default("slow");	
+			m_cluster.m_schedulor.setPreset_default("medium");	
 		}else{
 			m_cluster.m_schedulor.setPreset_default(pset);
 		}
+//		m_cluster.m_schedulor.setPreset_default(pset);
 		
 		m_cluster.m_schedulor.setV(v);
 		
-		m_recorder = new Recorder(lastTS,this,slot_interval);  
+		m_recorder = new Recorder(_lastTS,this,slot_interval);  
 
 		for (int i=0; i<videoBaseNameStrings.length; i++) {
 			String videoName = videoBaseNameStrings[i];
 			
 			// register record and queue			
-			Generator generator = new Generator(i, lastTS, avg_interval, all_presets);
+			Generator generator = new Generator(i, _lastTS, avg_interval, all_presets);
 			
 			generator.m_cm = m_cluster;
 			generator.m_videoName = videoName;
