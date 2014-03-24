@@ -215,7 +215,7 @@ public class Recorder extends Event{
 		sb.append(prefix).append("task_delay_"+vNameIndex+"=[");
 		for (int i=0; i < loglist.size(); i++){
 			Task tskTask = loglist.get(i);
-			assert(tskTask.taskID == i);
+			assert(tskTask.realJobID == i);
 			sb.append(tskTask.rec_outTS - tskTask.rec_inTS).append(",");
 		}
 		sb.append("];");
@@ -230,7 +230,7 @@ public class Recorder extends Event{
 		sb.append(prefix).append("task_quality_"+vNameIndex+"=[");
 		for (int i=0; i < loglist.size(); i++){
 			Task tskTask = loglist.get(i);
-			assert(tskTask.taskID == i);
+			assert(tskTask.realJobID == i);
 			CodingSet cset = tskTask.getCodingResult(tskTask.rec_preset);
 			sb.append(cset.outputBitR).append(",");
 		}
@@ -244,7 +244,7 @@ public class Recorder extends Event{
 		for (Task task : tasklog) {
 			if (task.videoName.equals(vNameBase)) {
 				int i=0;
-				while(i < loglist.size() && task.taskID > loglist.get(i).taskID){
+				while(i < loglist.size() && task.realJobID > loglist.get(i).realJobID){
 					i++;
 				}
 				loglist.add(i, task);
@@ -262,7 +262,7 @@ public class Recorder extends Event{
 		sb.append(prefix).append("task_preset_"+vNameIndex+"=[");
 		for (int i=0; i < loglist.size(); i++){
 			Task tskTask = loglist.get(i);
-			assert(tskTask.taskID == i);
+			assert(tskTask.realJobID == i);
 			sb.append(m_simulator.getPresetIndex(tskTask.rec_preset)).append(",");
 		}
 		sb.append("];");

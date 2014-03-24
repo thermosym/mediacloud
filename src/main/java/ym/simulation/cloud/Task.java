@@ -13,7 +13,7 @@ public class Task {
 	String videoName;
 //	int queueIndex;
 	double origBitR;	
-	long userID;
+	long realJobID;
 	long taskID;
 	ArrayList<CodingSet> codingSets;
 	
@@ -35,7 +35,7 @@ public class Task {
 		this.videoName = task.videoName;
 //		this.queueIndex = task.queueIndex;
 		this.origBitR = task.origBitR;
-		this.userID = task.userID;
+		this.realJobID = task.realJobID;
 		this.taskID = task.taskID;
 		this.codingSets = task.codingSets;
 		

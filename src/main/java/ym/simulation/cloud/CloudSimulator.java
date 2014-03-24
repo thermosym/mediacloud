@@ -23,11 +23,11 @@ public class CloudSimulator extends Simulator {
 //			"medium", "slow", "slower", "veryslow" };
 	public String all_presets[]={"superfast", "faster", "medium"};
 //	public String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_","sintel_trans_trace_"};
-	public String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_"};
-//	public String[] videoBaseNameStrings= {"bbb_trans_trace_"};
+//	public String[] videoBaseNameStrings= {"bbb_trans_trace_","ele_trans_trace_"};
+	public String[] videoBaseNameStrings= {"bbb_trans_trace_"};
     
-//	boolean opt = false; // mark static
-	boolean opt = true; // mark lyapunov
+	boolean opt = false; // mark static
+//	boolean opt = true; // mark lyapunov
 	double lastTS = 1;
 //	String prefixString = "lya_";
 	String prefixString;
@@ -47,28 +47,28 @@ public class CloudSimulator extends Simulator {
 
 
 	void start() {
-		avg_interval =3;
-		lastTS = 10000.0;
+		avg_interval =5;
+		lastTS = 1000.0;
 		if (opt) {
 			prefixString = "lya_";
 		}else{
 			prefixString = "sta_";
 		}
 		
-//		routine_show_singel_static();
+		routine_show_singel_static();
 		
-		if (opt) {
-			routine_show_avg_v_lyap();
-		}else{
-			routine_show_avg_preset_static();
-		}
+//		if (opt) {
+//			routine_show_avg_v_lyap();
+//		}else{
+//			routine_show_avg_preset_static();
+//		}
 		
 	}
 
 	void routine_show_singel_static(){
 //		double lastTS = 10000.0;
 		String pset = "medium";
-		double v=1000;
+		double v=100;
 		int numServer=1;
 		double scale=1;
 		

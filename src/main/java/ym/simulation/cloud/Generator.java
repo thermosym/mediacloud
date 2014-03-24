@@ -11,6 +11,7 @@ import java.util.ArrayList;
 * Generate a stream of Tasks for 8.0 time units.
 */
 public class Generator extends Event {
+	long m_lastjobID=0;
     long m_videoIndex;
     double lastTS;
     double avg_interval;
@@ -38,6 +39,7 @@ public class Generator extends Event {
     void execute(AbstractSimulator simulator) {
     	Task task = getOneVideo();
     	if (task != null){
+    		task.realJobID = m_lastjobID++;
         	task.rec_inTS = ((Simulator)simulator).now();
 
         	task.rec_preset = m_cm.m_schedulor.m_preset_default; 
